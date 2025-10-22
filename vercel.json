@@ -1,0 +1,5 @@
+{
+  "buildCommand": "vite build && pwd && ls -la && ls -la dist",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
+}
