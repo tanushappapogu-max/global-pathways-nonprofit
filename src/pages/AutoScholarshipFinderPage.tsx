@@ -101,33 +101,32 @@ export const AutoScholarshipFinderPage = () => {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
+  setLoading(true);
+  try {
+    // Import the function
+    const { matchScholarships } = await import('../api/scholarshipMatcher');
     
-    try {
-      // Call AI-powered scholarship matching edge function
-      const { data, error } = await supabase.functions.invoke('ai-scholarship-matcher', {
-        body: { 
-          profile: formData,
-          searchWeb: true // Enable web search for scholarships
-        }
-      });
-
-      if (error) {
-        console.error('Error calling AI matcher:', error);
-        // Fallback to mock results
-        setResults(getMockResults());
-      } else {
-        setResults(data.scholarships || getMockResults());
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      // Fallback to mock results
+    // Call ChatGPT to get personalized matches
+    console.log('Calling ChatGPT with form data:', formData);
+    const scholarships = await matchScholarships(formData);
+    console.log('Received scholarships:', scholarships);
+    
+    if (scholarships && scholarships.length > 0) {
+      setResults(scholarships);
+    } else {
+      // Fallback if API fails
       setResults(getMockResults());
     }
-    
-    setLoading(false);
     setStep(7);
-  };
+  } catch (error) {
+    console.error('Error matching scholarships:', error);
+    // Use fallback on error
+    setResults(getMockResults());
+    setStep(7);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getMockResults = () => {
     // Enhanced mock results based on user profile
