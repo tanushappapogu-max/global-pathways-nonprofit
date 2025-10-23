@@ -1,3 +1,9 @@
 {
-  "framework": "vite"
+  "framework": "vite",
+  "functions": {
+    "api/scholarships.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }
