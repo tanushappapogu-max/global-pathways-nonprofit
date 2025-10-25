@@ -113,6 +113,17 @@ export const AutoScholarshipFinderPage = () => {
     
     if (scholarships && scholarships.length > 0) {
       setResults(scholarships);
+      
+      // Track the search in database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('scholarship_searches').insert({
+          user_id: user.id,
+          search_data: formData,
+          results_count: scholarships.length
+        });
+        console.log('Search tracked successfully');
+      }
     } else {
       // Fallback if API fails
       setResults(getMockResults());
@@ -127,7 +138,6 @@ export const AutoScholarshipFinderPage = () => {
     setLoading(false);
   }
 };
-
   const getMockResults = () => {
     // Enhanced mock results based on user profile
     const baseResults = [
