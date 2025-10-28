@@ -313,7 +313,7 @@ export const CostCalculatorPage: React.FC = () => {
                         onChange={(e) => setCollegeSearch(e.target.value)}
                       />
                       {filteredColleges.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                           {filteredColleges.map((college) => (
                             <div
                               key={college.id}
