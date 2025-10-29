@@ -1,3 +1,4 @@
+import logoImage from "/images/logo1.ico";
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -102,10 +103,12 @@ export const Navigation: React.FC = () => {
               <Link to="/" className="flex items-center space-x-2 logo-glow group">
                 {logo.show_icon && (
                   <div className="relative">
-                    <GraduationCap 
-                      className="h-7 w-7 transition-all duration-300 group-hover:text-blue-700" 
-                      style={{ color: logo.icon_color }}
-                    />
+                    <img 
+  src={logoImage} 
+  alt="Logo" 
+  className="h-7 w-7 transition-all duration-300"
+/>
+                
                     <Sparkles className="absolute -top-1 -right-1 h-2 w-2 text-yellow-400 sparkle-animation" />
                   </div>
                 )}
