@@ -1,4 +1,4 @@
-import logoImage from "/images/logo1.ico";
+import logoImage from "/images/logo2.ico";
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -104,7 +104,7 @@ export const Navigation: React.FC = () => {
                 {logo.show_icon && (
                   <div className="relative">
                     <img 
-  src={logoImage} 
+  src="/images/logo2.ico" 
   alt="Logo" 
   className="h-7 w-7 transition-all duration-300"
 />
