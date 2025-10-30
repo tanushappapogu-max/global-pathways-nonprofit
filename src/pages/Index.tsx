@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,14 +24,14 @@ import {
   TrendingUp,
   Award,
   Search,
-  Calculator
+  Calculator,
+  CheckCircle,
+  Rocket
 } from 'lucide-react';
 
-// Import ReactBits animations
 import { ShinyText } from '@/components/animations/ShinyText';
 import { Magnetic } from '@/components/animations/Magnetic';
 import { CountUp } from '@/components/animations/CountUp';
-import { AnimatedThreads } from '@/components/animations/AnimatedThreads';
 
 const Index = () => {
   const { t } = useLanguage();
@@ -39,17 +40,14 @@ const Index = () => {
   const [heroContent, setHeroContent] = useState(null);
   const [statsContent, setStatsContent] = useState(null);
   const [featuresContent, setFeaturesContent] = useState(null);
-  const [globalSettings, setGlobalSettings] = useState(null);
 
   useEffect(() => {
     setIsVisible(true);
     fetchHomepageContent();
-    fetchGlobalSettings();
   }, []);
 
   const fetchHomepageContent = async () => {
     try {
-      // Fetch hero content
       const { data: heroData } = await supabase
         .from('homepage_content_2025_10_14_03_00')
         .select('*')
@@ -59,7 +57,6 @@ const Index = () => {
 
       if (heroData) setHeroContent(heroData.content);
 
-      // Fetch stats content
       const { data: statsData } = await supabase
         .from('homepage_content_2025_10_14_03_00')
         .select('*')
@@ -69,7 +66,6 @@ const Index = () => {
 
       if (statsData) setStatsContent(statsData.content);
 
-      // Fetch features content
       const { data: featuresData } = await supabase
         .from('homepage_content_2025_10_14_03_00')
         .select('*')
@@ -83,28 +79,6 @@ const Index = () => {
     }
   };
 
-  const fetchGlobalSettings = async () => {
-    try {
-      const { data } = await supabase
-        .from('website_global_settings_2025_10_14_03_00')
-        .select('*');
-
-      if (data) {
-        const settings = {};
-        data.forEach(setting => {
-          if (!settings[setting.setting_category]) {
-            settings[setting.setting_category] = {};
-          }
-          settings[setting.setting_category][setting.setting_name] = setting.setting_value;
-        });
-        setGlobalSettings(settings);
-      }
-    } catch (error) {
-      console.error('Error fetching global settings:', error);
-    }
-  };
-
-  // Default fallback content
   const defaultHero = {
     title: "Your Path to U.S. Higher Education",
     subtitle: "Comprehensive guidance for international and underprivileged students with AI-powered scholarship matching and real-time updates.",
@@ -114,34 +88,32 @@ const Index = () => {
 
   const defaultStats = {
     stats: [
-      { number: 100, label: "Scholarships Available", suffix: "+", color: "text-blue-600" },
-      { number: 0, label: "Partner Universities", suffix: "+", color: "text-green-600" },
-      { number: 95, label: "Success Rate", suffix: "%", color: "text-purple-600" },
-      { number: 24, label: "AI Support", suffix: "/7", color: "text-orange-600" }
+      { number: 500, label: "Students Helped", suffix: "+", color: "text-blue-600", icon: "Users" },
+      { number: 2.5, label: "Million in Aid Found", prefix: "$", suffix: "M", color: "text-green-600", icon: "DollarSign" },
+      { number: 95, label: "Success Rate", suffix: "%", color: "text-purple-600", icon: "TrendingUp" },
+      { number: 1000, label: "Scholarships Available", suffix: "+", color: "text-orange-600", icon: "Award" }
     ]
   };
 
   const defaultFeatures = {
-    title: "Powerful Tools for Your Success",
-    subtitle: "Everything you need to navigate the complex world of U.S. college admissions",
     features: [
       {
         title: "AI Scholarship Finder",
-        description: "Get personalized scholarship recommendations using advanced AI matching algorithms.",
+        description: "Get personalized scholarship recommendations using advanced AI matching algorithms and real-time web search.",
         icon: "Search",
         color: "from-blue-500 to-blue-600",
         link: "/auto-scholarships"
       },
       {
         title: "Cost Calculator",
-        description: "Calculate your total education costs with our comprehensive financial planning tool.",
+        description: "Calculate your total education costs with our comprehensive financial planning tool tailored to your profile.",
         icon: "Calculator",
         color: "from-green-500 to-green-600",
         link: "/cost-calculator"
       },
       {
         title: "College Database",
-        description: "Explore thousands of colleges with detailed information and comparison tools.",
+        description: "Explore thousands of colleges with detailed information, comparison tools, and acceptance predictions.",
         icon: "GraduationCap",
         color: "from-purple-500 to-purple-600",
         link: "/colleges"
@@ -155,147 +127,253 @@ const Index = () => {
 
   const getIconComponent = (iconName) => {
     const icons = {
-      Search,
-      Calculator,
-      GraduationCap,
-      Award,
-      TrendingUp,
-      Clock,
-      Users
+      Search, Calculator, GraduationCap, Award, TrendingUp, Clock, Users, DollarSign, Target
     };
     return icons[iconName] || Search;
   };
 
-  const backgroundGradient = globalSettings?.colors?.background_gradients?.hero_gradient || "from-blue-50 via-white to-purple-50";
-
   return (
-    <div className={`flex flex-col min-h-screen bg-gradient-to-br ${backgroundGradient} relative`}>
-      {/* Animated Background Threads */}
-      <AnimatedThreads />
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 relative overflow-hidden">
+      {/* Animated Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:64px_64px]"></div>
       
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-32 left-20 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style={{ animationDelay: '4s' }}></div>
-      </div>
+      {/* Gradient Orbs */}
+      <motion.div 
+        className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{ duration: 8, repeat: Infinity }}
+      />
+      <motion.div 
+        className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
+        animate={{
+          scale: [1.2, 1, 1.2],
+          opacity: [0.5, 0.3, 0.5],
+        }}
+        transition={{ duration: 10, repeat: Infinity }}
+      />
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 text-center">
-        <div className="max-w-6xl mx-auto">
-          <div className={`${isVisible ? 'slide-in-up' : 'opacity-0'}`}>
-            <Magnetic>
-              <Badge className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-6 py-2 text-sm font-medium pulse-animation">
-                <Sparkles className="w-4 h-4 mr-2 sparkle-animation" />
-                AI-Powered College Guidance
-              </Badge>
-            </Magnetic>
+      <section className="relative py-32 px-4 text-center">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <Badge className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-6 py-3 text-base font-medium">
+              <Rocket className="w-5 h-5 mr-2" />
+              AI-Powered College Guidance Platform
+            </Badge>
             
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="block mb-2">Your Path to</span>
-              <ShinyText 
-                text={hero.title || "U.S. Higher Education"}
-                className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent"
-              />
-            </h1>
+            <motion.h1 
+              className="text-7xl md:text-8xl font-black mb-8 leading-tight"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
+              <span className="block mb-4 bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+                Your Path to
+              </span>
+              <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                U.S. Higher Education
+              </span>
+            </motion.h1>
             
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
+            <motion.p 
+              className="text-2xl md:text-3xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
               {hero.subtitle}
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Magnetic strength={0.2}>
-                <Link to={hero.primary_button?.link || "/auto-scholarships"}>
-                  <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                    <Search className="mr-2 h-5 w-5" />
-                    {hero.primary_button?.text || "Try AI Scholarship Finder"}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-              </Magnetic>
-              <Magnetic strength={0.2}>
-                <Link to={hero.secondary_button?.link || "/scholarships"}>
-                  <Button size="lg" variant="outline" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold transition-all duration-300">
-                    <BookOpen className="mr-2 h-5 w-5" />
-                    {hero.secondary_button?.text || "Browse Scholarships"}
-                  </Button>
-                </Link>
-              </Magnetic>
-            </div>
-          </div>
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
+            >
+              <Link to="/auto-scholarships">
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-7 text-xl font-bold shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 group">
+                  <Sparkles className="mr-3 h-6 w-6 group-hover:rotate-180 transition-transform duration-500" />
+                  Try AI Scholarship Finder
+                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                </Button>
+              </Link>
+              <Link to="/scholarships">
+                <Button size="lg" variant="outline" className="border-2 border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-10 py-7 text-xl font-bold transition-all duration-300 backdrop-blur-sm">
+                  <BookOpen className="mr-3 h-6 w-6" />
+                  Browse Scholarships
+                </Button>
+              </Link>
+            </motion.div>
+
+            {/* Trust Indicators */}
+            <motion.div 
+              className="flex flex-wrap justify-center gap-8 text-gray-400"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span>501(c)(3) Nonprofit</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span>100% Free</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span>AI-Powered Matching</span>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/20 to-transparent"></div>
+        <div className="max-w-7xl mx-auto px-4 relative">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-4 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1 }
+              }
+            }}
+          >
             {stats.stats?.map((stat, index) => {
-              const IconComponent = getIconComponent(stat.icon) || Award;
+              const IconComponent = getIconComponent(stat.icon);
               return (
-                <Magnetic key={index} strength={0.1}>
-                  <div className="text-center interactive-card bg-white rounded-2xl p-6 shadow-lg">
-                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4 pulse-animation`}>
-                      <IconComponent className={`h-8 w-8 ${stat.color}`} />
-                    </div>
-                    <div className="text-3xl font-bold text-gray-900 mb-2">
-                      <CountUp 
-                        end={stat.number} 
-                        suffix={stat.suffix} 
-                        prefix={stat.prefix}
-                      />
-                    </div>
-                    <div className="text-gray-600">{stat.label}</div>
+                <motion.div
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 50 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  className="text-center bg-white/5 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 hover:border-blue-400/50 transition-all duration-300"
+                >
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <IconComponent className="h-10 w-10 text-white" />
                   </div>
-                </Magnetic>
+                  <div className="text-5xl font-black text-white mb-3">
+                    <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
+                  </div>
+                  <div className="text-gray-300 text-lg font-medium">{stat.label}</div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              {features.title}
+      <section className="py-32 relative">
+        <div className="max-w-7xl mx-auto px-4">
+          <motion.div 
+            className="text-center mb-20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className="text-6xl font-black text-white mb-6">
+              Powerful Tools for Your Success
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {features.subtitle}
+            <p className="text-2xl text-gray-300 max-w-3xl mx-auto">
+              Everything you need to navigate the complex world of U.S. college admissions
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.15 }
+              }
+            }}
+          >
             {features.features?.map((feature, index) => {
               const IconComponent = getIconComponent(feature.icon);
               return (
-                <Magnetic key={index} strength={0.15}>
-                  <Link to={feature.link} className="group">
-                    <Card className="interactive-card h-full bg-white/90 backdrop-blur-sm border-0 shadow-lg hover:shadow-2xl">
-                      <CardHeader className="text-center pb-4">
-                        <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 pulse-animation`}>
-                          <IconComponent className="h-8 w-8 text-white" />
+                <motion.div
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 50 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  whileHover={{ y: -10 }}
+                  className="group"
+                >
+                  <Link to={feature.link}>
+                    <Card className="h-full bg-white/5 backdrop-blur-xl border border-white/10 hover:border-blue-400/50 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20">
+                      <CardHeader className="text-center pb-6">
+                        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                          <IconComponent className="h-10 w-10 text-white" />
                         </div>
-                        <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          <ShinyText text={feature.title} />
+                        <CardTitle className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors">
+                          {feature.title}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="text-center">
-                        <CardDescription className="text-gray-600 leading-relaxed">
+                        <CardDescription className="text-gray-300 leading-relaxed text-lg mb-6">
                           {feature.description}
                         </CardDescription>
-                        <div className="mt-4 flex items-center justify-center text-blue-600 font-medium group-hover:text-blue-700">
-                          Learn More
-                          <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <div className="flex items-center justify-center text-blue-400 font-semibold group-hover:text-blue-300 text-lg">
+                          Get Started
+                          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-2 transition-transform" />
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
-                </Magnetic>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-32 relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent"></div>
+        <div className="max-w-5xl mx-auto px-4 text-center relative">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className="text-6xl font-black text-white mb-8">
+              Ready to Start Your Journey?
+            </h2>
+            <p className="text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
+              Join thousands of students who have found their path to U.S. higher education
+            </p>
+            <Link to="/signup">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-8 text-2xl font-bold shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 group">
+                <Rocket className="mr-3 h-7 w-7 group-hover:translate-y-[-4px] transition-transform" />
+                Get Started Free
+                <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
+              </Button>
+            </Link>
+          </motion.div>
         </div>
       </section>
     </div>
