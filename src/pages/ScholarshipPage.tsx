@@ -270,7 +270,7 @@ export const ScholarshipPage = () => {
                 <Card className="bg-white/10 border border-white/20 hover:border-blue-400/50 backdrop-blur-lg shadow-xl transition-all duration-300 rounded-2xl">
                   <CardHeader className="p-6">
                     <CardTitle className="text-3xl font-bold text-white mb-2">{scholarship.name}</CardTitle>
-                    <CardDescription className="text-gray-300 text-sm">{scholarship.provider}</CardDescription>
+                    <CardDescription className="text-gray-300 text-lg">{scholarship.provider}</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 space-y-4">
                     <div className="flex items-center gap-3">
