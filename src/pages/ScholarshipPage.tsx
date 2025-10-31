@@ -286,7 +286,7 @@ export const ScholarshipPage = () => {
                       asChild
                       className="w-full mt-3 bg-gradient-to-r from-blue-600 to-pink-500 hover:from-blue-500 hover:to-pink-400 text-white font-semibold"
                     >
-                      <a href={scholarship.apply_link} target="_blank" rel="noopener noreferrer">
+                      <a href={scholarship.application_url} target="_blank" rel="noopener noreferrer">
                         Apply Now
                       </a>
                     </Button>
