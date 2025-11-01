@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { matchScholarships } from '@/api/scholarshipMatcher';
 import { 
   Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar
 } from 'lucide-react';
@@ -55,24 +56,28 @@ export const AutoScholarshipFinderPage = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { matchScholarships } = await import('../api/scholarshipMatcher');
+      console.log('Starting scholarship matching...');
       const scholarships = await matchScholarships(formData);
       
       if (scholarships && scholarships.length > 0) {
+        console.log('Scholarships found:', scholarships.length);
         setResults(scholarships);
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from('scholarship_searches').insert({
-            user_id: user.id, search_data: formData, results_count: scholarships.length
+            user_id: user.id, 
+            search_data: formData, 
+            results_count: scholarships.length
           });
         }
       } else {
+        console.log('No scholarships found, using mock results');
         setResults(getMockResults());
       }
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in handleSubmit:', error);
       setResults(getMockResults());
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -200,7 +205,7 @@ export const AutoScholarshipFinderPage = () => {
               </div>
             )}
 
-{step === 2 && (
+            {step === 2 && (
               <div className="space-y-8">
                 <div className="text-center mb-8">
                   <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Personal Background</h2>
