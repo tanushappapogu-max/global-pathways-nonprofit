@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { matchScholarships } from '@/api/scholarshipMatcher';
+import { v4 as uuidv4 } from 'uuid';
 import { 
   Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar
 } from 'lucide-react';
@@ -37,6 +38,14 @@ export const AutoScholarshipFinderPage = () => {
       ...prev,
       [field]: checked ? [...prev[field], value] : prev[field].filter(item => item !== value)
     }));
+  const [anonymousId, setAnonymousId] = useState(() => {
+  let id = localStorage.getItem('anonymousId');
+  if (!id) {
+    id = uuidv4();
+    localStorage.setItem('anonymousId', id);
+  }
+  return id;
+});
   };
 
   const handleNext = () => {
@@ -52,6 +61,12 @@ export const AutoScholarshipFinderPage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+// Get or create a unique anonymous ID for logged-out users
+let anonymousId = localStorage.getItem('anonymousId');
+if (!anonymousId) {
+  anonymousId = uuidv4();
+  localStorage.setItem('anonymousId', anonymousId);
+}
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -62,14 +77,17 @@ export const AutoScholarshipFinderPage = () => {
       if (scholarships && scholarships.length > 0) {
         console.log('Scholarships found:', scholarships.length);
         setResults(scholarships);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('scholarship_searches').insert({
-            user_id: user.id, 
-            search_data: formData, 
-            results_count: scholarships.length
-          });
-        }
+        // Check if user is logged in
+const { data: { user } } = await supabase.auth.getUser();
+
+await supabase.from('scholarship_searches').insert({
+  user_id: user ? user.id : null,          // null if not logged in
+  anonymous_id: user ? null : anonymousId, // use anonymous ID if not logged in
+  search_data: formData,
+  results_count: scholarships.length,
+  created_at: new Date()
+});
+
       } else {
         console.log('No scholarships found, using mock results');
         setResults(getMockResults());
