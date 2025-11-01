@@ -221,7 +221,7 @@ const Index = () => {
             >
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-400" />
-                <span>501(c)(3) Nonprofit</span>
+                <span>501(c)(3) Nonprofit (pending)</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-400" />

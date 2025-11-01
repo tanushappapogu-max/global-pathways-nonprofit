@@ -117,7 +117,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center text-gray-400">
                 <Heart className="h-4 w-4 mr-2" />
-                501(c)(3) Nonprofit
+                501(c)(3) Nonprofit (pending)
               </li>
             </ul>
           </div>
