@@ -236,50 +236,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-24 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/20 to-transparent"></div>
-        <div className="max-w-7xl mx-auto px-4 relative">
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-4 gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.1 }
-              }
-            }}
-          >
-            {stats.stats?.map((stat, index) => {
-              const IconComponent = getIconComponent(stat.icon);
-              return (
-                <motion.div
-                  key={index}
-                  variants={{
-                    hidden: { opacity: 0, y: 50 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center bg-white/5 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 hover:border-blue-400/50 transition-all duration-300"
-                >
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <IconComponent className="h-10 w-10 text-white" />
-                  </div>
-                  <div className="text-5xl font-black text-white mb-3">
-                    <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
-                  </div>
-                  <div className="text-gray-300 text-lg font-medium">{stat.label}</div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features Section */}
+    {/* Features Section */}
       <section className="py-32 relative">
         <div className="max-w-7xl mx-auto px-4">
           <motion.div 
@@ -349,6 +306,50 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
+      {/* Stats Section */}
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/20 to-transparent"></div>
+        <div className="max-w-7xl mx-auto px-4 relative">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-4 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1 }
+              }
+            }}
+          >
+            {stats.stats?.map((stat, index) => {
+              const IconComponent = getIconComponent(stat.icon);
+              return (
+                <motion.div
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 50 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  className="text-center bg-white/5 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 hover:border-blue-400/50 transition-all duration-300"
+                >
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <IconComponent className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="text-5xl font-black text-white mb-3">
+                    <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
+                  </div>
+                  <div className="text-gray-300 text-lg font-medium">{stat.label}</div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+  
 
       {/* CTA Section */}
       <section className="py-32 relative">
