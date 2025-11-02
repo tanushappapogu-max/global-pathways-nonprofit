@@ -1,529 +1,783 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { CountUp } from '@/components/animations/CountUp';
 import { 
   Users, 
-  Plus, 
-  Download, 
-  CheckCircle, 
-  Clock, 
+  UserPlus, 
+  TrendingUp, 
+  Award, 
+  FileText, 
+  CheckCircle,
+  Search,
+  Filter,
+  Download,
+  Mail,
+  Calendar,
+  Target,
+  BarChart3,
   AlertCircle,
+  Clock,
+  GraduationCap,
+  DollarSign,
+  X,
   Edit,
   Trash2,
-  FileText,
-  BarChart3,
-  GraduationCap,
+  Eye,
   BookOpen,
-  Target,
-  TrendingUp,
-  Award,
-  Calendar
+  TrendingDown
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { ShinyText } from '@/components/animations/ShinyText';
-import { CountUp } from '@/components/animations/CountUp';
+
+interface Student {
+  id: string;
+  student_id: string;
+  student_name: string;
+  student_email: string;
+  grade_level: string;
+  gpa: number;
+  notes: string;
+  added_at: string;
+  progress?: {
+    fafsa_completed: boolean;
+    profile_completion: number;
+    scholarships_applied: number;
+    colleges_applied: number;
+    last_activity: string;
+  };
+}
 
 const CounselorPortalPage = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [counselorProfile, setCounselorProfile] = useState(null);
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [filterGrade, setFilterGrade] = useState('all');
+  const [filterFafsa, setFilterFafsa] = useState('all');
+  const [newStudent, setNewStudent] = useState({
+    student_name: '',
+    student_email: '',
+    grade_level: '',
+    gpa: '',
+    notes: ''
+  });
+
+  const [isCounselor, setIsCounselor] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchCounselorProfile();
-      fetchStudents();
-    }
+    checkUserRole();
   }, [user]);
 
-  const fetchCounselorProfile = async () => {
-    if (!user) return;
-    
+  useEffect(() => {
+    if (isCounselor) {
+      fetchStudents();
+    }
+  }, [isCounselor]);
+
+  useEffect(() => {
+    let filtered = students.filter(student =>
+      student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    if (filterGrade !== 'all') {
+      filtered = filtered.filter(s => s.grade_level === filterGrade);
+    }
+
+    if (filterFafsa !== 'all') {
+      filtered = filtered.filter(s => 
+        filterFafsa === 'completed' ? s.progress?.fafsa_completed : !s.progress?.fafsa_completed
+      );
+    }
+
+    setFilteredStudents(filtered);
+  }, [searchTerm, students, filterGrade, filterFafsa]);
+
+  const checkUserRole = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
       const { data, error } = await supabase
-        .from('counselor_profiles_2025_10_06_00_42')
-        .select('*')
+        .from('user_roles')
+        .select('role')
         .eq('user_id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching counselor profile:', error);
-        return;
+      if (error) {
+        setIsCounselor(false);
+      } else {
+        setIsCounselor(data?.role === 'counselor');
       }
-
-      if (data) {
-        setCounselorProfile(data);
-      }
+      setLoading(false);
     } catch (error) {
-      console.error('Error:', error);
-    } finally {
+      console.error('Error checking role:', error);
+      setIsCounselor(false);
       setLoading(false);
     }
   };
 
   const fetchStudents = async () => {
-    if (!user) return;
-    
     try {
       const { data, error } = await supabase
-        .from('counselor_students_2025_10_06_00_42')
+        .from('counselor_students')
         .select('*')
-        .eq('counselor_id', user.id);
+        .eq('counselor_id', user?.id)
+        .order('added_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching students:', error);
-        return;
-      }
+      if (error) throw error;
 
-      setStudents(data || []);
+      const studentsWithProgress = await Promise.all(
+        (data || []).map(async (student) => {
+          const { data: progress } = await supabase
+            .from('student_progress')
+            .select('*')
+            .eq('student_id', student.student_id)
+            .single();
+
+          return { ...student, progress };
+        })
+      );
+
+      setStudents(studentsWithProgress);
+      setFilteredStudents(studentsWithProgress);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching students:', error);
     }
   };
 
-  const mockStudents = [
-    {
-      id: '1',
-      name: 'Example Student',
-      email: 'example@email.com',
-      grade: '12',
-      gpa: 3.5,
-      fafsa_status: 'in_progress',
-      applications_submitted: 5,
-      aid_received: 25000,
-      last_activity: '2024-01-15'
+  const addStudent = async () => {
+    if (!newStudent.student_name || !newStudent.student_email) {
+      alert('Please fill in required fields');
+      return;
     }
-  ];
 
-  const displayStudents = students.length > 0 ? students : mockStudents;
+    try {
+      const studentId = crypto.randomUUID();
+      
+      const { error } = await supabase
+        .from('counselor_students')
+        .insert({
+          counselor_id: user?.id,
+          student_id: studentId,
+          ...newStudent,
+          gpa: parseFloat(newStudent.gpa) || null
+        });
 
-  if (!user) {
+      if (error) throw error;
+
+      // Create initial progress entry
+      await supabase
+        .from('student_progress')
+        .insert({
+          student_id: studentId,
+          counselor_id: user?.id,
+          fafsa_completed: false,
+          profile_completion: 0,
+          scholarships_applied: 0,
+          colleges_applied: 0
+        });
+
+      setShowAddModal(false);
+      setNewStudent({ student_name: '', student_email: '', grade_level: '', gpa: '', notes: '' });
+      fetchStudents();
+    } catch (error) {
+      console.error('Error adding student:', error);
+      alert('Error adding student');
+    }
+  };
+
+  const deleteStudent = async (studentId: string) => {
+    if (!confirm('Are you sure you want to remove this student?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('counselor_students')
+        .delete()
+        .eq('id', studentId);
+
+      if (error) throw error;
+      fetchStudents();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Name', 'Email', 'Grade', 'GPA', 'FAFSA Status', 'Profile %', 'Scholarships', 'Colleges'];
+    const rows = filteredStudents.map(s => [
+      s.student_name,
+      s.student_email,
+      s.grade_level,
+      s.gpa,
+      s.progress?.fafsa_completed ? 'Complete' : 'Incomplete',
+      s.progress?.profile_completion || 0,
+      s.progress?.scholarships_applied || 0,
+      s.progress?.colleges_applied || 0
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `students-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const stats = {
+    totalStudents: students.length,
+    fafsaCompleted: students.filter(s => s.progress?.fafsa_completed).length,
+    avgScholarships: Math.round(
+      students.reduce((sum, s) => sum + (s.progress?.scholarships_applied || 0), 0) / (students.length || 1)
+    ),
+    avgProgress: Math.round(
+      students.reduce((sum, s) => sum + (s.progress?.profile_completion || 0), 0) / (students.length || 1)
+    )
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        
-          <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm shadow-xl">
-            <CardHeader className="text-center">
-              <GraduationCap className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <CardTitle>Counselor Portal</CardTitle>
-              <CardDescription>
-                Please log in to access the counselor portal
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                <a href="/login">Log In</a>
-              </Button>
-            </CardContent>
-          </Card>
-        
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-300 text-lg">Loading counselor portal...</p>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading counselor portal...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 max-w-md">
+          <CardContent className="p-12 text-center">
+            <GraduationCap className="h-16 w-16 text-blue-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Counselor Portal</h2>
+            <p className="text-gray-400 mb-6">Please log in to access the counselor portal</p>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 w-full" asChild>
+              <a href="/login">Log In</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isCounselor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 max-w-md">
+            <CardContent className="p-12 text-center">
+              <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+              <p className="text-gray-400 mb-6">
+                This portal is only accessible to counselors. Students should use the regular dashboard.
+              </p>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 w-full" asChild>
+                <a href="/dashboard">Go to Student Dashboard</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+      <motion.div 
+        className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" 
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} 
+        transition={{ duration: 8, repeat: Infinity }} 
+      />
+      <motion.div 
+        className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" 
+        animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.5, 0.3] }} 
+        transition={{ duration: 8, repeat: Infinity, delay: 1 }} 
+      />
+
+      <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <Badge className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-6 py-2 text-sm font-medium">
-            <Users className="w-4 h-4 mr-2" />
-            For Counselors
-          </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-            <ShinyText text="Counselor Portal" />
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Manage your students and track their college application progress
-          </p>
-        </div>
+        <motion.div 
+          className="flex items-center justify-between mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div>
+            <h1 className="text-4xl font-black text-white mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Counselor Portal
+            </h1>
+            <p className="text-xl text-gray-400">Manage and track your students' progress</p>
+          </div>
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            <UserPlus className="h-5 w-5 mr-2" />
+            Add Student
+          </Button>
+        </motion.div>
 
-        {/* Quick Stats */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="h-6 w-6 text-blue-600" />
+          {[
+            { icon: Users, label: "Total Students", value: stats.totalStudents, color: "blue", gradient: "from-blue-500 to-blue-600" },
+            { icon: CheckCircle, label: "FAFSA Completed", value: stats.fafsaCompleted, color: "green", gradient: "from-green-500 to-green-600" },
+            { icon: Award, label: "Avg Scholarships", value: stats.avgScholarships, color: "purple", gradient: "from-purple-500 to-purple-600" },
+            { icon: Target, label: "Avg Progress", value: stats.avgProgress, suffix: "%", color: "orange", gradient: "from-orange-500 to-orange-600" }
+          ].map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all">
+                <CardContent className="p-6">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-4`}>
+                    <stat.icon className="h-6 w-6 text-white" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Students</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      <CountUp end={displayStudents.length} />
-                    </p>
+                  <div className="text-3xl font-black text-white mb-1">
+                    <CountUp end={stat.value} suffix={stat.suffix} />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          
-
-          
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">FAFSA Complete</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      <CountUp end={displayStudents.filter(s => s.fafsa_status === 'completed').length} />
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          
-
-          
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">In Progress</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      <CountUp end={displayStudents.filter(s => s.fafsa_status === 'in_progress').length} />
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          
-
-          
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Avg Aid Received</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      $<CountUp end={displayStudents.length > 0 ? Math.round(displayStudents.reduce((sum, s) => sum + (s.aid_received || 0), 0) / displayStudents.length) : 0} />
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          
+                  <p className="text-gray-400 text-sm">{stat.label}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/90 backdrop-blur-sm">
-            <TabsTrigger value="students">My Students</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
-          </TabsList>
+        {/* Search & Filters */}
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="flex-1 w-full relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  placeholder="Search students by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <Select value={filterGrade} onValueChange={setFilterGrade}>
+                <SelectTrigger className="w-full md:w-40 bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="9">Grade 9</SelectItem>
+                  <SelectItem value="10">Grade 10</SelectItem>
+                  <SelectItem value="11">Grade 11</SelectItem>
+                  <SelectItem value="12">Grade 12</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterFafsa} onValueChange={setFilterFafsa}>
+                <SelectTrigger className="w-full md:w-40 bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="FAFSA" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="incomplete">Incomplete</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={exportToCSV}
+                variant="outline" 
+                className="w-full md:w-auto border-white/20 text-white hover:bg-white/10"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="students" className="space-y-6">
-            
-              <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Student Management</CardTitle>
-                      <CardDescription>Track and manage your students' college application progress</CardDescription>
+        {/* Students Grid */}
+        {filteredStudents.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10">
+              <CardContent className="p-12 text-center">
+                <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">
+                  {students.length === 0 ? 'No Students Yet' : 'No Matching Students'}
+                </h3>
+                <p className="text-gray-400 mb-6">
+                  {students.length === 0 
+                    ? 'Add students to start tracking their progress' 
+                    : 'Try adjusting your filters or search term'}
+                </p>
+                {students.length === 0 && (
+                  <Button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-blue-600 to-purple-600">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Your First Student
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredStudents.map((student, index) => (
+              <motion.div
+                key={student.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all h-full">
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-white text-lg mb-1">{student.student_name}</CardTitle>
+                        <CardDescription className="text-gray-400 text-sm flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {student.student_email}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex items-center gap-2">
+                      {student.grade_level && (
+                        <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
+                          Grade {student.grade_level}
+                        </Badge>
+                      )}
+                      {student.gpa && (
+                        <Badge className="bg-purple-500/20 text-purple-300 border-purple-400/30">
+                          GPA: {student.gpa.toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 mb-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-400 text-xs">Profile Completion</span>
+                          <span className="text-white text-xs font-semibold">
+                            {student.progress?.profile_completion || 0}%
+                          </span>
+                        </div>
+                        <Progress value={student.progress?.profile_completion || 0} className="h-2" />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10 text-center">
+                          <div className="text-lg font-bold text-purple-400">
+                            {student.progress?.scholarships_applied || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">Scholarships</div>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10 text-center">
+                          <div className="text-lg font-bold text-blue-400">
+                            {student.progress?.colleges_applied || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">Colleges</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 mb-3 border-t border-white/10">
+                      {student.progress?.fafsa_completed ? (
+                        <Badge className="bg-green-500/20 text-green-300 border-green-400/30">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          FAFSA Done
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-orange-500/20 text-orange-300 border-orange-400/30">
+                          <Clock className="h-3 w-3 mr-1" />
+                          FAFSA Pending
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
                       <Button 
-                        variant="outline" 
-                        size="sm"
+                        size="sm" 
+                        variant="outline"
                         onClick={() => {
-                          const csvContent = "data:text/csv;charset=utf-8," + 
-                            "Name,Email,Grade,GPA,FAFSA Status,Applications,Aid Received\n" +
-                            displayStudents.map(s => 
-                              `${s.name},${s.email},${s.grade},${s.gpa},${s.fafsa_status},${s.applications_submitted},${s.aid_received || 0}`
-                            ).join("\n");
-                          const encodedUri = encodeURI(csvContent);
-                          const link = document.createElement("a");
-                          link.setAttribute("href", encodedUri);
-                          link.setAttribute("download", "students_export.csv");
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
+                          setSelectedStudent(student);
+                          setShowDetailModal(true);
                         }}
+                        className="flex-1 border-white/20 text-white hover:bg-white/10"
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
                       </Button>
                       <Button 
                         size="sm" 
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => {
-                          const name = prompt('Enter student name:');
-                          const email = prompt('Enter student email:');
-                          if (name && email) {
-                            alert(`Student ${name} (${email}) added successfully!`);
-                          }
-                        }}
+                        variant="outline"
+                        onClick={() => deleteStudent(student.id)}
+                        className="border-red-400/30 text-red-400 hover:bg-red-500/10"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Student
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4">Student</th>
-                          <th className="text-left py-3 px-4">Grade</th>
-                          <th className="text-left py-3 px-4">GPA</th>
-                          <th className="text-left py-3 px-4">FAFSA Status</th>
-                          <th className="text-left py-3 px-4">Applications</th>
-                          <th className="text-left py-3 px-4">Aid Received</th>
-                          <th className="text-left py-3 px-4">Last Activity</th>
-                          <th className="text-left py-3 px-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {displayStudents.map((student) => (
-                          <tr key={student.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4">
-                              <div>
-                                <div className="font-medium">{student.name}</div>
-                                <div className="text-sm text-gray-600">{student.email}</div>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">{student.grade}</td>
-                            <td className="py-3 px-4">{student.gpa}</td>
-                            <td className="py-3 px-4">
-                              <Badge 
-                                variant={
-                                  student.fafsa_status === 'completed' ? 'default' :
-                                  student.fafsa_status === 'in_progress' ? 'secondary' : 'outline'
-                                }
-                                className={
-                                  student.fafsa_status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  student.fafsa_status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' : 
-                                  'bg-red-100 text-red-800'
-                                }
-                              >
-                                {student.fafsa_status.replace('_', ' ')}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">{student.applications_submitted}</td>
-                            <td className="py-3 px-4">${student.aid_received?.toLocaleString() || '0'}</td>
-                            <td className="py-3 px-4">{student.last_activity}</td>
-                            <td className="py-3 px-4">
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => {
-                                    const newName = prompt('Enter new name:', student.name);
-                                    if (newName) {
-                                      alert(`Student name updated to: ${newName}`);
-                                    }
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => {
-                                    alert(`Student Details:\nName: ${student.name}\nEmail: ${student.email}\nGrade: ${student.grade}\nGPA: ${student.gpa}\nFAFSA Status: ${student.fafsa_status}\nApplications: ${student.applications_submitted}\nAid Received: $${student.aid_received?.toLocaleString() || '0'}`);
-                                  }}
-                                >
-                                  <FileText className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-          <TabsContent value="profile" className="space-y-6">
-            
-              <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+        {/* Add Student Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-md"
+            >
+              <Card className="bg-slate-900 border border-white/20">
                 <CardHeader>
-                  <CardTitle>Counselor Profile</CardTitle>
-                  <CardDescription>Manage your professional information and preferences</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Add New Student</CardTitle>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setShowAddModal(false)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription className="text-gray-400">
+                    Enter student information to begin tracking their progress
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-white text-sm mb-2 block">Student Name *</label>
+                    <Input
+                      placeholder="John Doe"
+                      value={newStudent.student_name}
+                      onChange={(e) => setNewStudent({...newStudent, student_name: e.target.value})}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm mb-2 block">Email *</label>
+                    <Input
+                      type="email"
+                      placeholder="student@email.com"
+                      value={newStudent.student_email}
+                      onChange={(e) => setNewStudent({...newStudent, student_email: e.target.value})}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" placeholder="Your full name" />
+                      <label className="text-white text-sm mb-2 block">Grade Level</label>
+                      <Select value={newStudent.grade_level} onValueChange={(value) => setNewStudent({...newStudent, grade_level: value})}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="9">Grade 9</SelectItem>
+                          <SelectItem value="10">Grade 10</SelectItem>
+                          <SelectItem value="11">Grade 11</SelectItem>
+                          <SelectItem value="12">Grade 12</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <Label htmlFor="title">Job Title</Label>
-                      <Input id="title" placeholder="College Counselor" />
-                    </div>
-                    <div>
-                      <Label htmlFor="school">School/Organization</Label>
-                      <Input id="school" placeholder="School name" />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" placeholder="(555) 123-4567" />
+                      <label className="text-white text-sm mb-2 block">GPA</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        max="4.0"
+                        placeholder="3.75"
+                        value={newStudent.gpa}
+                        onChange={(e) => setNewStudent({...newStudent, gpa: e.target.value})}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                      />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="bio">Professional Bio</Label>
-                    <Textarea id="bio" placeholder="Tell us about your experience..." rows={4} />
+                    <label className="text-white text-sm mb-2 block">Notes (Optional)</label>
+                    <Textarea
+                      placeholder="Additional notes about the student..."
+                      value={newStudent.notes}
+                      onChange={(e) => setNewStudent({...newStudent, notes: e.target.value})}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                      rows={3}
+                    />
                   </div>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => alert('Profile saved successfully!')}
-                  >
-                    Save Profile
-                  </Button>
+                  <div className="flex space-x-3 pt-4">
+                    <Button 
+                      onClick={() => setShowAddModal(false)}
+                      variant="outline"
+                      className="flex-1 border-white/20 text-white hover:bg-white/10"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={addStudent}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
+                      Add Student
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            
-          </TabsContent>
+            </motion.div>
+          </div>
+        )}
 
-          <TabsContent value="resources" className="space-y-6">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <FileText className="h-8 w-8 text-blue-600 mb-2" />
-                    <CardTitle>FAFSA Tracking Sheet</CardTitle>
-                    <CardDescription>Download a spreadsheet to track student FAFSA progress</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="https://studentaid.gov/sites/default/files/fafsa-tracking-worksheet.pdf" target="_blank">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Template
-                      </a>
+        {/* Student Detail Modal */}
+        {showDetailModal && selectedStudent && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <Card className="bg-slate-900 border border-white/20">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-white text-2xl">{selectedStudent.student_name}</CardTitle>
+                      <CardDescription className="text-gray-400">{selectedStudent.student_email}</CardDescription>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setShowDetailModal(false)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
                     </Button>
-                  </CardContent>
-                </Card>
-              
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <div className="text-sm text-gray-400 mb-1">GPA</div>
+                      <div className="text-xl font-bold text-white">{selectedStudent.gpa?.toFixed(2) || 'N/A'}</div>
+                    </div>
+                  </div>
 
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <BookOpen className="h-8 w-8 text-green-600 mb-2" />
-                    <CardTitle>Counselor Training</CardTitle>
-                    <CardDescription>Access training materials and best practices</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="https://studentaid.gov/help-center/answers/topic/counselors" target="_blank">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        View Training
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              
+                  <div>
+                    <h3 className="text-white font-bold mb-3">Progress Overview</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-400">Profile Completion</span>
+                          <span className="text-white font-semibold">{selectedStudent.progress?.profile_completion || 0}%</span>
+                        </div>
+                        <Progress value={selectedStudent.progress?.profile_completion || 0} className="h-2" />
+                      </div>
 
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <Target className="h-8 w-8 text-purple-600 mb-2" />
-                    <CardTitle>Success Metrics</CardTitle>
-                    <CardDescription>Track your impact and student outcomes</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="/impact" target="_blank">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        View Analytics
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10 text-center">
+                          <Award className="h-5 w-5 text-purple-400 mx-auto mb-2" />
+                          <div className="text-2xl font-bold text-purple-400">{selectedStudent.progress?.scholarships_applied || 0}</div>
+                          <div className="text-xs text-gray-400">Scholarships Applied</div>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10 text-center">
+                          <GraduationCap className="h-5 w-5 text-blue-400 mx-auto mb-2" />
+                          <div className="text-2xl font-bold text-blue-400">{selectedStudent.progress?.colleges_applied || 0}</div>
+                          <div className="text-xs text-gray-400">Colleges Applied</div>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10 text-center">
+                          {selectedStudent.progress?.fafsa_completed ? (
+                            <>
+                              <CheckCircle className="h-5 w-5 text-green-400 mx-auto mb-2" />
+                              <div className="text-sm font-bold text-green-400">Complete</div>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-5 w-5 text-orange-400 mx-auto mb-2" />
+                              <div className="text-sm font-bold text-orange-400">Pending</div>
+                            </>
+                          )}
+                          <div className="text-xs text-gray-400">FAFSA Status</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <Calendar className="h-8 w-8 text-orange-600 mb-2" />
-                    <CardTitle>Important Deadlines</CardTitle>
-                    <CardDescription>Stay updated on key financial aid deadlines</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="https://studentaid.gov/help-center/answers/article/fafsa-deadlines" target="_blank">
+                  {selectedStudent.notes && (
+                    <div>
+                      <h3 className="text-white font-bold mb-2">Notes</h3>
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                        <p className="text-gray-300 text-sm">{selectedStudent.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="text-white font-bold mb-2">Activity Timeline</h3>
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <div className="flex items-center text-gray-400 text-sm">
                         <Calendar className="h-4 w-4 mr-2" />
-                        View Calendar
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              
+                        Added on {new Date(selectedStudent.added_at).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                      {selectedStudent.progress?.last_activity && (
+                        <div className="flex items-center text-gray-400 text-sm mt-2">
+                          <Clock className="h-4 w-4 mr-2" />
+                          Last active {new Date(selectedStudent.progress.last_activity).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <Award className="h-8 w-8 text-red-600 mb-2" />
-                    <CardTitle>Scholarship Database</CardTitle>
-                    <CardDescription>Access curated scholarships for your students</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="/scholarships">
-                        <Award className="h-4 w-4 mr-2" />
-                        Browse Scholarships
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      asChild
+                    >
+                      <a href={`mailto:${selectedStudent.student_email}`}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send Email
                       </a>
                     </Button>
-                  </CardContent>
-                </Card>
-              
-
-              
-                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
-                  <CardHeader>
-                    <Users className="h-8 w-8 text-indigo-600 mb-2" />
-                    <CardTitle>Counselor Community</CardTitle>
-                    <CardDescription>Connect with other counselors and share resources</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href="https://www.nacanet.org/" target="_blank">
-                        <Users className="h-4 w-4 mr-2" />
-                        Join Community
-                      </a>
+                    <Button 
+                      variant="outline"
+                      className="border-white/20 text-white hover:bg-white/10"
+                      onClick={() => setShowDetailModal(false)}
+                    >
+                      Close
                     </Button>
-                  </CardContent>
-                </Card>
-              
-            </div>
-          </TabsContent>
-        </Tabs>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default CounselorPortalPage;
+
