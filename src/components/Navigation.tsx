@@ -4,14 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSelector } from './LanguageSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { GraduationCap, Menu, X, Sparkles } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { t } = useLanguage();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -44,7 +41,6 @@ export const Navigation: React.FC = () => {
         return;
       }
 
-      // Filter items based on authentication requirement
       const filteredItems = data.filter(item => {
         if (item.requires_auth && !user) return false;
         return true;
@@ -76,14 +72,13 @@ export const Navigation: React.FC = () => {
     }
   };
 
-  // Default logo settings
   const defaultLogo = {
     text: "Global Pathways",
     subtitle: "Your Path to Success",
     icon: "GraduationCap",
     icon_color: "#3b82f6",
-    text_color: "#1f2937",
-    subtitle_color: "#6b7280",
+    text_color: "#ffffff",
+    subtitle_color: "#9ca3af",
     show_icon: true,
     show_subtitle: true,
     size: "large"
@@ -93,37 +88,30 @@ export const Navigation: React.FC = () => {
 
   return (
     <div className="w-full">
-      <nav className={`bg-white/95 backdrop-blur-md shadow-sm border-b sticky top-0 z-50 transition-all duration-300 w-full ${
-        isScrolled ? 'shadow-lg bg-white/98' : ''
+      <nav className={`bg-slate-950/95 backdrop-blur-md shadow-lg border-b border-white/10 sticky top-0 z-50 transition-all duration-300 w-full ${
+        isScrolled ? 'shadow-2xl' : ''
       }`}>
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-20 w-full justify-between">
-            {/* Logo - Dynamic from Supabase */}
+            {/* Logo */}
             <div className="flex-shrink-0 mr-4">
               <Link to="/" className="flex items-center space-x-2 logo-glow group">
                 {logo.show_icon && (
                   <div className="relative">
                     <img 
-  src="/images/logo2.ico" 
-  alt="Logo" 
-  className="h-7 w-7 transition-all duration-300"
-/>
-                
+                      src="/images/logo2.ico" 
+                      alt="Logo" 
+                      className="h-7 w-7 transition-all duration-300"
+                    />
                     <Sparkles className="absolute -top-1 -right-1 h-2 w-2 text-yellow-400 sparkle-animation" />
                   </div>
                 )}
                 <div className="hidden sm:flex flex-col">
-                  <span 
-                    className="text-base font-bold group-hover:text-blue-600 transition-colors"
-                    style={{ color: logo.text_color }}
-                  >
+                  <span className="text-base font-bold text-white group-hover:text-blue-400 transition-colors">
                     {logo.text}
                   </span>
                   {logo.show_subtitle && (
-                    <span 
-                      className="text-xs group-hover:text-blue-500 transition-colors"
-                      style={{ color: logo.subtitle_color }}
-                    >
+                    <span className="text-xs text-gray-400 group-hover:text-blue-300 transition-colors">
                       {logo.subtitle}
                     </span>
                   )}
@@ -133,7 +121,7 @@ export const Navigation: React.FC = () => {
 
             {/* Desktop Navigation - Pill Style */}
             <div className="hidden lg:flex flex-1 items-center justify-center">
-              <div className="bg-white/80 backdrop-blur-md rounded-full px-6 py-3 shadow-lg border border-gray-200/50">
+              <div className="bg-white/10 backdrop-blur-md rounded-full px-6 py-3 shadow-lg border border-white/20">
                 <div className="flex items-center space-x-1">
                   {navItems.map((item) => (
                     <Link
@@ -141,8 +129,8 @@ export const Navigation: React.FC = () => {
                       to={item.path}
                       className={`nav-item text-xs font-medium transition-all duration-300 whitespace-nowrap px-4 py-2 rounded-full flex items-center space-x-1 ${
                         location.pathname === item.path
-                          ? 'text-white bg-blue-600 shadow-md'
-                          : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                          ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-md'
+                          : 'text-gray-300 hover:text-white hover:bg-white/10'
                       }`}
                     >
                       <span className="text-xs">{item.icon}</span>
@@ -153,19 +141,18 @@ export const Navigation: React.FC = () => {
               </div>
             </div>
 
-            {/* Desktop Auth - Compact */}
+            {/* Desktop Auth */}
             <div className="hidden lg:flex items-center space-x-2 ml-4 flex-shrink-0">
-              <LanguageSelector />
               {user ? (
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-700 max-w-20 truncate">
+                  <span className="text-xs text-gray-300 max-w-20 truncate">
                     {user.user_metadata?.full_name || user.email}
                   </span>
                   <Button 
                     onClick={signOut} 
                     variant="outline" 
                     size="sm"
-                    className="text-xs px-2 py-1 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all"
+                    className="text-xs px-2 py-1 border-white/20 text-white hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 transition-all"
                   >
                     Logout
                   </Button>
@@ -176,7 +163,7 @@ export const Navigation: React.FC = () => {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      className="text-xs px-2 py-1 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                      className="text-xs px-2 py-1 text-gray-300 hover:bg-white/10 hover:text-white transition-all"
                     >
                       Login
                     </Button>
@@ -195,12 +182,11 @@ export const Navigation: React.FC = () => {
 
             {/* Mobile menu button */}
             <div className="lg:hidden flex items-center space-x-2 ml-auto">
-              <LanguageSelector />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="relative overflow-hidden"
+                className="relative overflow-hidden text-white hover:bg-white/10"
               >
                 <div className={`transition-all duration-300 ${mobileMenuOpen ? 'rotate-180' : 'rotate-0'}`}>
                   {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -212,7 +198,7 @@ export const Navigation: React.FC = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-white/98 backdrop-blur-md border-t shadow-lg">
+          <div className="lg:hidden bg-slate-900/98 backdrop-blur-md border-t border-white/10 shadow-lg">
             <ScrollArea className="h-96 px-4 py-4">
               <div className="space-y-2">
                 {navItems.map((item) => (
@@ -221,8 +207,8 @@ export const Navigation: React.FC = () => {
                     to={item.path}
                     className={`nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                       location.pathname === item.path
-                        ? 'text-blue-600 bg-blue-50 border border-blue-200'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
+                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -232,20 +218,20 @@ export const Navigation: React.FC = () => {
                 ))}
                 
                 {/* Mobile Auth */}
-                <div className="pt-4 border-t border-gray-200 mt-4">
+                <div className="pt-4 border-t border-white/10 mt-4">
                   {user ? (
                     <div className="space-y-3">
                       <div className="px-4 py-2">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-white">
                           {user.user_metadata?.full_name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-gray-400">{user.email}</p>
                       </div>
                       <Button 
                         onClick={signOut} 
                         variant="outline" 
                         size="sm"
-                        className="w-full hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all"
+                        className="w-full border-white/20 text-white hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 transition-all"
                       >
                         Logout
                       </Button>
@@ -256,7 +242,7 @@ export const Navigation: React.FC = () => {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          className="w-full hover:bg-blue-50 hover:text-blue-600 transition-all"
+                          className="w-full text-gray-300 hover:bg-white/10 hover:text-white transition-all"
                         >
                           Login
                         </Button>
