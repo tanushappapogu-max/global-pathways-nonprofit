@@ -780,10 +780,7 @@ export const CostCalculatorPage: React.FC = () => {
                         <span>Personal Expenses</span>
                         <span className="font-semibold text-white">{formatCurrency(costs.personal)}</span>
                       </div>
-                      <div className="flex justify-between text-gray-300">
-                        <span>Health Insurance</span>
-                        <span className="font-semibold text-white">{formatCurrency(costs.healthInsurance)}</span>
-                      </div>
+                
                       <div className="flex justify-between text-gray-300">
                         <span>Technology & Equipment</span>
                         <span className="font-semibold text-white">{formatCurrency(costs.technology)}</span>
