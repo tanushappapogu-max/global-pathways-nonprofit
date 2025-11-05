@@ -129,10 +129,10 @@ export const Footer: React.FC = () => {
             © 2025 Global Pathways. All rights reserved.
           </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link to="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-white text-sm transition-colors">
               Privacy Policy
             </Link>
-            <Link to="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-white text-sm transition-colors">
               Terms of Service
             </Link>
             <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
