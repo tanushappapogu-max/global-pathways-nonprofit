@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { CountUp } from '@/components/animations/CountUp';
+
 import { 
   Search, 
   MapPin, 
@@ -69,6 +70,7 @@ export const CollegesPage: React.FC = () => {
   const [maxTuition, setMaxTuition] = useState<number | undefined>();
   const [testOptionalOnly, setTestOptionalOnly] = useState(false);
   const [needBlindOnly, setNeedBlindOnly] = useState(false);
+  const [showTopButton, setShowTopButton] = useState(false);
 
   const collegeTypes = [
     { value: 'ivy_league', label: 'Ivy League' },
@@ -112,6 +114,19 @@ export const CollegesPage: React.FC = () => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+  const handleScroll = () => {
+    if (window.scrollY > 300) {
+      setShowTopButton(true);
+    } else {
+      setShowTopButton(false);
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+
 
   const applyFilters = () => {
     let filtered = [...colleges];
@@ -255,6 +270,18 @@ export const CollegesPage: React.FC = () => {
         </motion.div>
 
         <div className="grid lg:grid-cols-4 gap-8">
+          {/* Back to Top Button */}
+<motion.button
+  initial={{ opacity: 0 }}
+  animate={{ opacity: showTopButton ? 1 : 0 }}
+  transition={{ duration: 0.3 }}
+  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+  className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white p-4 rounded-full shadow-xl z-50"
+>
+  ↑ Top
+</motion.button>
+
+          
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-8 bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
