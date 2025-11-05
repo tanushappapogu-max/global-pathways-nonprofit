@@ -9,15 +9,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { matchScholarships } from '@/api/scholarshipMatcher';
+import { supabase } from '@/integrations/supabase/client';
 import { trackToolUsage, completeToolUsage } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar
+  Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar, Search
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 
 export const AutoScholarshipFinderPage = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     gpa: '', satScore: '', actScore: '', classRank: '', major: '', academicHonors: [],
@@ -73,6 +75,9 @@ export const AutoScholarshipFinderPage = () => {
 
     try {
       console.log('Starting scholarship matching...');
+      
+      // Try to import and use the scholarship matcher
+      const { matchScholarships } = await import('@/api/scholarshipMatcher');
       const scholarships = await matchScholarships(formData);
       
       if (scholarships && scholarships.length > 0) {
@@ -121,6 +126,53 @@ export const AutoScholarshipFinderPage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveMatches = async () => {
+    try {
+      if (!user) {
+        // Save to localStorage if not logged in
+        localStorage.setItem('savedMatches', JSON.stringify(results));
+        toast({
+          title: "Matches Saved!",
+          description: "Your scholarship matches have been saved locally. Sign in to save them to your account."
+        });
+        return;
+      }
+
+      // Save to Supabase for logged-in users
+      const matchesToSave = results.map(scholarship => ({
+        user_id: user.id,
+        scholarship_name: scholarship.name,
+        provider: scholarship.provider,
+        amount: scholarship.amount,
+        deadline: scholarship.deadline,
+        match_percentage: Math.round(scholarship.match),
+        description: scholarship.description,
+        url: scholarship.url,
+        requirements: scholarship.requirements,
+        saved_at: new Date().toISOString()
+      }));
+
+      const { error } = await supabase
+        .from('saved_scholarships')
+        .insert(matchesToSave);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: `${results.length} scholarships saved to your dashboard!`
+      });
+
+    } catch (error) {
+      console.error('Error saving matches:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save matches. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -243,27 +295,35 @@ export const AutoScholarshipFinderPage = () => {
               </div>
             )}
 
-            {/* Steps 2-6 remain the same as your original code - I'll continue in next artifact */}
-            {step === 2 && (
-              <div className="space-y-8">
+            {/* Continue with steps 2-6 from document 7... Due to character limit, I'll show step 7 with the save functionality */}
+{step === 2 && (
+              <div className="space-y-6">
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Personal Background</h2>
+                  <h2 className="text-3xl font-bold text-white mb-3">Personal Background</h2>
                   <p className="text-gray-300 text-lg">Help us find scholarships that match your background</p>
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label className="block text-base font-medium text-white mb-2">Ethnicity/Race</Label>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Ethnicity/Race
+                    </Label>
                     <Select value={formData.ethnicity} onValueChange={(value) => handleInputChange('ethnicity', value)}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white h-12">
                         <SelectValue placeholder="Select ethnicity" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ethnicityOptions.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                        {ethnicityOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  
                   <div>
-                    <Label className="block text-base font-medium text-white mb-2">Gender</Label>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Gender
+                    </Label>
                     <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white h-12">
                         <SelectValue placeholder="Select gender" />
@@ -276,16 +336,35 @@ export const AutoScholarshipFinderPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div>
-                    <Label className="block text-base font-medium text-white mb-2">State of Residence</Label>
-                    <Input placeholder="California" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 h-12" />
+                    <Label className="block text-base font-medium text-white mb-2">
+                      State of Residence
+                    </Label>
+                    <Input
+                      placeholder="California"
+                      value={formData.state}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 h-12"
+                    />
                   </div>
+
                   <div>
-                    <Label className="block text-base font-medium text-white mb-2">ZIP Code</Label>
-                    <Input placeholder="90210" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 h-12" />
+                    <Label className="block text-base font-medium text-white mb-2">
+                      ZIP Code
+                    </Label>
+                    <Input
+                      placeholder="90210"
+                      value={formData.zipCode}
+                      onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 h-12"
+                    />
                   </div>
+
                   <div>
-                    <Label className="block text-base font-medium text-white mb-2">Citizenship Status</Label>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Citizenship Status
+                    </Label>
                     <Select value={formData.citizenship} onValueChange={(value) => handleInputChange('citizenship', value)}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white h-12">
                         <SelectValue placeholder="Select status" />
@@ -299,16 +378,32 @@ export const AutoScholarshipFinderPage = () => {
                     </Select>
                   </div>
                 </div>
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="firstGeneration" checked={formData.firstGeneration} onCheckedChange={(checked) => handleInputChange('firstGeneration', checked)} className="border-white/20" />
-                  <Label htmlFor="firstGeneration" className="text-gray-300 cursor-pointer">I am a first-generation college student</Label>
+                  <Checkbox
+                    id="firstGeneration"
+                    checked={formData.firstGeneration}
+                    onCheckedChange={(checked) => handleInputChange('firstGeneration', checked)}
+                    className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                  <Label htmlFor="firstGeneration" className="text-gray-300 cursor-pointer">
+                    I am a first-generation college student (neither parent has a 4-year degree)
+                  </Label>
                 </div>
+
                 <div>
-                  <Label className="block text-base font-medium text-white mb-3">Languages Spoken (select all that apply)</Label>
+                  <Label className="block text-base font-medium text-white mb-3">
+                    Languages Spoken (select all that apply)
+                  </Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {languageOptions.map((language) => (
                       <div key={language} className="flex items-center space-x-2">
-                        <Checkbox id={language} checked={formData.languages.includes(language)} onCheckedChange={(checked) => handleArrayChange('languages', language, checked)} className="border-white/20" />
+                        <Checkbox
+                          id={language}
+                          checked={formData.languages.includes(language)}
+                          onCheckedChange={(checked) => handleArrayChange('languages', language, checked)}
+                          className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                        />
                         <Label htmlFor={language} className="text-sm text-gray-300 cursor-pointer">{language}</Label>
                       </div>
                     ))}
@@ -317,8 +412,236 @@ export const AutoScholarshipFinderPage = () => {
               </div>
             )}
 
-            {/* Steps 3-7 code continues... Due to length, showing the key tracking integration */}
-            
+            {step === 3 && (
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-3">Financial Information</h2>
+                  <p className="text-gray-300 text-lg">This helps us find need-based scholarships</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Annual Family Income Range
+                    </Label>
+                    <Select value={formData.familyIncome} onValueChange={(value) => handleInputChange('familyIncome', value)}>
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white h-12">
+                        <SelectValue placeholder="Select income range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="under-25k">Under $25,000</SelectItem>
+                        <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
+                        <SelectItem value="50k-75k">$50,000 - $75,000</SelectItem>
+                        <SelectItem value="75k-100k">$75,000 - $100,000</SelectItem>
+                        <SelectItem value="100k-150k">$100,000 - $150,000</SelectItem>
+                        <SelectItem value="over-150k">Over $150,000</SelectItem>
+                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="needBasedAid"
+                    checked={formData.needBasedAid}
+                    onCheckedChange={(checked) => handleInputChange('needBasedAid', checked)}
+                    className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                  <Label htmlFor="needBasedAid" className="text-gray-300 cursor-pointer">
+                    I am interested in need-based financial aid
+                  </Label>
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-3">Activities & Leadership</h2>
+                  <p className="text-gray-300 text-lg">Showcase your extracurricular involvement and achievements</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Extracurricular Activities
+                    </Label>
+                    <Textarea
+                      placeholder="List your clubs, sports, organizations, etc."
+                      value={formData.extracurriculars}
+                      onChange={(e) => handleInputChange('extracurriculars', e.target.value)}
+                      rows={3}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Leadership Roles
+                    </Label>
+                    <Textarea
+                      placeholder="Describe any leadership positions you've held"
+                      value={formData.leadership}
+                      onChange={(e) => handleInputChange('leadership', e.target.value)}
+                      rows={3}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Community Service & Volunteer Work
+                    </Label>
+                    <Textarea
+                      placeholder="Describe your volunteer experiences and community involvement"
+                      value={formData.communityService}
+                      onChange={(e) => handleInputChange('communityService', e.target.value)}
+                      rows={3}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Work Experience
+                    </Label>
+                    <Textarea
+                      placeholder="List any part-time jobs, internships, or work experience"
+                      value={formData.workExperience}
+                      onChange={(e) => handleInputChange('workExperience', e.target.value)}
+                      rows={3}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Awards & Recognition
+                    </Label>
+                    <Textarea
+                      placeholder="List any awards, honors, or special recognition you've received"
+                      value={formData.awards}
+                      onChange={(e) => handleInputChange('awards', e.target.value)}
+                      rows={3}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-3">
+                      Special Talents & Skills (select all that apply)
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {talentOptions.map((talent) => (
+                        <div key={talent} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={talent}
+                            checked={formData.talents.includes(talent)}
+                            onCheckedChange={(checked) => handleArrayChange('talents', talent, checked)}
+                            className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                          />
+                          <Label htmlFor={talent} className="text-sm text-gray-300 cursor-pointer">{talent}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 5 && (
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-3">Career Goals & Preferences</h2>
+                  <p className="text-gray-300 text-lg">Tell us about your future plans and college preferences</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Career Goals & Aspirations
+                    </Label>
+                    <Textarea
+                      placeholder="Describe your career goals and what you hope to achieve"
+                      value={formData.careerGoals}
+                      onChange={(e) => handleInputChange('careerGoals', e.target.value)}
+                      rows={4}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Preferred College Type
+                    </Label>
+                    <Select value={formData.collegeType} onValueChange={(value) => handleInputChange('collegeType', value)}>
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white h-12">
+                        <SelectValue placeholder="Select college type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="public">Public Universities</SelectItem>
+                        <SelectItem value="private">Private Universities</SelectItem>
+                        <SelectItem value="liberal-arts">Liberal Arts Colleges</SelectItem>
+                        <SelectItem value="community">Community Colleges</SelectItem>
+                        <SelectItem value="technical">Technical/Trade Schools</SelectItem>
+                        <SelectItem value="no-preference">No Preference</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="studyAbroad"
+                      checked={formData.studyAbroad}
+                      onCheckedChange={(checked) => handleInputChange('studyAbroad', checked)}
+                      className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <Label htmlFor="studyAbroad" className="text-gray-300 cursor-pointer">
+                      I am interested in study abroad opportunities
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 6 && (
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-3">Additional Information</h2>
+                  <p className="text-gray-300 text-lg">Share any unique circumstances or challenges</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Personal Challenges or Obstacles Overcome
+                    </Label>
+                    <Textarea
+                      placeholder="Describe any significant challenges you've faced and overcome"
+                      value={formData.challenges}
+                      onChange={(e) => handleInputChange('challenges', e.target.value)}
+                      rows={4}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="block text-base font-medium text-white mb-2">
+                      Unique Circumstances or Background
+                    </Label>
+                    <Textarea
+                      placeholder="Share anything unique about your background or circumstances"
+                      value={formData.uniqueCircumstances}
+                      onChange={(e) => handleInputChange('uniqueCircumstances', e.target.value)}
+                      rows={4}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {step === 7 && (
               <div className="space-y-8">
                 <div className="text-center mb-8">
@@ -377,12 +700,15 @@ export const AutoScholarshipFinderPage = () => {
                     ))}
                     <div className="text-center pt-8 space-y-4">
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg" onClick={() => { localStorage.setItem('savedMatches', JSON.stringify(results)); alert('Matches saved successfully!'); }}>
+                        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg" onClick={saveMatches}>
                           <CheckCircle className="mr-2 h-5 w-5" />
-                          Save My Matches
+                          Save to Dashboard
                         </Button>
                         <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg" asChild>
-                          <a href="/scholarships">Find More Scholarships</a>
+                          <a href="/scholarships">
+                            <Search className="mr-2 h-5 w-5" />
+                            Find More Scholarships
+                          </a>
                         </Button>
                       </div>
                     </div>
