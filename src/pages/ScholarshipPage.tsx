@@ -24,6 +24,7 @@ export const ScholarshipPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAmount, setSelectedAmount] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [showTopButton, setShowTopButton] = useState(false);
 
   useEffect(() => {
     fetchScholarships();
@@ -32,6 +33,19 @@ export const ScholarshipPage = () => {
   useEffect(() => {
     filterScholarships();
   }, [scholarships, searchTerm, selectedCategory, selectedAmount]);
+
+  useEffect(() => {
+  const handleScroll = () => {
+    if (window.scrollY > 300) {
+      setShowTopButton(true);
+    } else {
+      setShowTopButton(false);
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
   const fetchScholarships = async () => {
     setLoading(true);
@@ -178,6 +192,17 @@ export const ScholarshipPage = () => {
             </div>
             <div className="text-gray-300 text-base font-medium">Available Scholarships</div>
           </motion.div>
+
+{/* Back to Top Button */}
+<motion.button
+  initial={{ opacity: 0 }}
+  animate={{ opacity: showTopButton ? 1 : 0 }}
+  transition={{ duration: 0.3 }}
+  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+  className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white p-4 rounded-full shadow-xl z-50"
+>
+  ↑ Top
+</motion.button>
 
           <motion.div
             variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
