@@ -23,7 +23,6 @@ import {
   Map
 } from 'lucide-react';
 import { ShinyText } from '@/components/animations/ShinyText';
-
 import { CountUp } from '@/components/animations/CountUp';
 
 interface RoadmapItem {
@@ -46,7 +45,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Core platform with FAFSA guidance, college database, and user accounts',
       status: 'completed',
       quarter: 'Q3',
-      year: 2024,
+      year: 2025,
       features: [
         'User registration and authentication',
         'Comprehensive college database',
@@ -63,7 +62,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Advanced tools, counselor portal, and impact tracking',
       status: 'completed',
       quarter: 'Q4',
-      year: 2024,
+      year: 2025,
       features: [
         'College cost calculator',
         'Counselor portal with student tracking',
@@ -80,7 +79,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Intelligent chatbot and personalized recommendations',
       status: 'in-progress',
       quarter: 'Q1',
-      year: 2025,
+      year: 2026,
       features: [
         'AI chatbot for FAFSA questions',
         'Personalized scholarship matching',
@@ -97,7 +96,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Native mobile apps with push notifications and offline access',
       status: 'planned',
       quarter: 'Q2',
-      year: 2025,
+      year: 2026,
       features: [
         'iOS and Android native apps',
         'Push notifications for deadlines',
@@ -114,7 +113,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Support for students applying to universities worldwide',
       status: 'planned',
       quarter: 'Q3',
-      year: 2025,
+      year: 2026,
       features: [
         'UK university application guide',
         'Canadian college resources',
@@ -131,7 +130,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Connect students with college mentors and alumni',
       status: 'planned',
       quarter: 'Q4',
-      year: 2025,
+      year: 2026,
       features: [
         'Peer mentorship matching',
         'Alumni mentor network',
@@ -148,7 +147,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Predictive analytics and success probability modeling',
       status: 'planned',
       quarter: 'Q1',
-      year: 2026,
+      year: 2027,
       features: [
         'Admission probability calculator',
         'Financial aid prediction models',
@@ -165,7 +164,7 @@ export const RoadmapPage: React.FC = () => {
       description: 'Large-scale institutional adoption and policy integration',
       status: 'planned',
       quarter: 'Q2',
-      year: 2026,
+      year: 2027,
       features: [
         'State education department partnerships',
         'Federal agency collaboration',
@@ -181,7 +180,7 @@ export const RoadmapPage: React.FC = () => {
   const visionGoals = [
     {
       title: '100,000 Students Helped',
-      description: 'Reach 100,000 students worldwide by 2026',
+      description: 'Reach 100,000 students worldwide by 2027',
       progress: 2.8,
       icon: <GraduationCap className="h-8 w-8 text-blue-600" />
     },
@@ -252,7 +251,7 @@ export const RoadmapPage: React.FC = () => {
         <section className="mb-16">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              <ShinyText text="Our 2026 Vision" />
+              <ShinyText text="Our 2027 Vision" />
             </h2>
             <p className="text-lg text-gray-600">
               Ambitious goals that drive our mission forward
@@ -287,7 +286,7 @@ export const RoadmapPage: React.FC = () => {
               <ShinyText text="Development Timeline" />
             </h2>
             <p className="text-lg text-gray-600">
-              Our planned features and milestones from 2024 to 2026
+              Our planned features and milestones from 2025 to 2027
             </p>
           </div>
 
