@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { CountUp } from '@/components/animations/CountUp';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackToolUsage, completeToolUsage } from '@/lib/utils';
 import { 
   Calculator, 
   DollarSign, 
