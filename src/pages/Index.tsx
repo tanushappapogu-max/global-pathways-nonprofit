@@ -150,18 +150,16 @@ const Index = () => {
             </Badge>
             
             <motion.h1 
-              className="text-7xl md:text-8xl font-black mb-8 leading-normal"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-            >
-              <span className="block mb-4 text-gray-900">
-                Your Path to
-              </span>
-              <span className="block bg-gradient-to-r from-gray-900 via-gray-900 to-gray-900 bg-clip-text text-transparent">
-                U.S. Higher Education
-              </span>
-            </motion.h1>
+  className="text-7xl md:text-8xl font-black mb-8 leading-relaxed"
+>
+  <span className="block mb-4 text-gray-900">
+    Your Path to
+  </span>
+  <span className="block bg-gradient-to-r from-gray-900 via-gray-900 to-gray-900 bg-clip-text text-transparent pb-2">
+    U.S. Higher Education
+  </span>
+</motion.h1>
+
             
             <motion.p 
               className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed font-light"
