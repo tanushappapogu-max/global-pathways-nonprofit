@@ -210,7 +210,7 @@ export const ScholarshipPage = () => {
             className="text-center bg-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/10 hover:border-purple-400/50 transition-all duration-300"
           >
             <div className="text-4xl md:text-5xl font-black text-purple-400 mb-3">
-              <CountUp end={totalAmount / 1_000_000} decimals={2} suffix="M" prefix="$" />
+              <CountUp end={totalAmount / 1_000_000} suffix="M" prefix="$" />
 
             </div>
             <div className="text-gray-300 text-base font-medium">Total Aid Available</div>
