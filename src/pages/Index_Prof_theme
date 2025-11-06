@@ -155,7 +155,7 @@ const Index = () => {
   <span className="block mb-4 text-gray-900">
     Your Path to
   </span>
-  <span className="block bg-gray-900 bg-clip-text text-transparent pb-2">
+  <span className="block bg-gradient-to-r from-gray-900 via-gray-900 to-gray-900 bg-clip-text text-transparent pb-2">
     U.S. Higher Education
   </span>
 </motion.h1>
@@ -217,7 +217,7 @@ const Index = () => {
       
 
       {/* Features Section */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="max-w-7xl mx-auto px-4">
           <motion.div 
             className="text-center mb-20"
