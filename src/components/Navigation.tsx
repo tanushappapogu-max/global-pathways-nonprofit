@@ -88,7 +88,7 @@ export const Navigation: React.FC = () => {
 
   return (
     <div className="w-full">
-      <nav className={`bg-slate-950/95 backdrop-blur-md shadow-lg border-b border-white/10 sticky top-0 z-50 transition-all duration-300 w-full ${
+      <nav className={`bg-blue-950 backdrop-blur-md shadow-lg border-b border-white/10 sticky top-0 z-50 transition-all duration-300 w-full ${
         isScrolled ? 'shadow-2xl' : ''
       }`}>
         <div className="w-full px-4 sm:px-6 lg:px-8">
