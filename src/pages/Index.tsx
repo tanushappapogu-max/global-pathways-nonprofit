@@ -150,19 +150,19 @@ const Index = () => {
             </Badge>
             
             <motion.h1 
-  className="text-7xl md:text-8xl font-black mb-8 leading-relaxed"
+  className="text-7xl md:text-8xl font-black mb-8 leading-[1.3] overflow-visible"
 >
   <span className="block mb-4 text-gray-900">
     Your Path to
   </span>
-  <span className="block bg-gray-900 bg-clip-text text-transparent pb-2">
+  <span className="inline-block bg-gray-900 bg-clip-text text-transparent pb-2">
     U.S. Higher Education
   </span>
 </motion.h1>
 
             
             <motion.p 
-              className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed font-light"
+              className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-[relaxed] font-light"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.8 }}
@@ -217,7 +217,7 @@ const Index = () => {
       
 
       {/* Features Section */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="max-w-7xl mx-auto px-4">
           <motion.div 
             className="text-center mb-20"
