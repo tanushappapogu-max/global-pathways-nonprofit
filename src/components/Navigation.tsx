@@ -88,9 +88,10 @@ export const Navigation: React.FC = () => {
 
   return (
     <div className="w-full">
-      <nav className={`bg-blue-950 backdrop-blur-md shadow-lg border-b border-white/10 sticky top-0 z-50 transition-all duration-300 w-full ${
-        isScrolled ? 'shadow-2xl' : ''
-      }`}>
+      <nav className={`bg-blue-950 backdrop-blur-md shadow-lg border-b border-white/10 fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+  isScrolled ? 'shadow-2xl' : ''
+}`}>
+
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-20 w-full justify-between">
             {/* Logo */}
