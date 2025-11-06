@@ -130,7 +130,7 @@ export const Navigation: React.FC = () => {
                       to={item.path}
                       className={`nav-item text-xs font-medium transition-all duration-300 whitespace-nowrap px-4 py-2 rounded-full flex items-center space-x-1 ${
                         location.pathname === item.path
-                          ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-md'
+                          ? 'text-white bg-gradient-to-r from-blue-500 to-blue-600 shadow-md'
                           : 'text-gray-300 hover:text-white hover:bg-white/10'
                       }`}
                     >
@@ -172,7 +172,7 @@ export const Navigation: React.FC = () => {
                   <Link to="/signup">
                     <Button 
                       size="sm"
-                      className="text-xs px-2 py-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                      className="text-xs px-2 py-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-500 transition-all duration-300"
                     >
                       Sign Up
                     </Button>
@@ -208,7 +208,7 @@ export const Navigation: React.FC = () => {
                     to={item.path}
                     className={`nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                       location.pathname === item.path
-                        ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
+                        ? 'text-white bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg'
                         : 'text-gray-300 hover:bg-white/10 hover:text-white'
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
@@ -251,7 +251,7 @@ export const Navigation: React.FC = () => {
                       <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
                         <Button 
                           size="sm"
-                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-xl"
                         >
                           Sign Up
                         </Button>
