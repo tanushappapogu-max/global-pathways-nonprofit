@@ -346,7 +346,7 @@ const Index = () => {
               Join thousands of students who have found their path to U.S. higher education
             </p>
             <Link to="/signup">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
+              <Button size="lg" className="bg-blue-900 hover:blue-500 text-white px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
                 <Rocket className="mr-3 h-7 w-7 group-hover:translate-y-[-4px] transition-transform" />
                 Get Started Free
                 <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
