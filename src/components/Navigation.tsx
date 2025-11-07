@@ -104,7 +104,7 @@ export const Navigation: React.FC = () => {
                       alt="Logo" 
                       className="h-7 w-7 transition-all duration-300"
                     />
-                    <Sparkles className="absolute -top-1 -right-1 h-2 w-2 text-yellow-400 sparkle-animation" />
+                    <Sparkles className="absolute -top-1 -right-1 h-2 w-2 text-white sparkle-animation" />
                   </div>
                 )}
                 <div className="hidden sm:flex flex-col">
