@@ -261,8 +261,8 @@ export const ScholarshipPage = () => {
                 variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }}
                 whileHover={{ scale: 1.02 }}
               >
-                <Card className="bg-white border border-gray-200 hover:border-blue-400 backdrop-blur-sm shadow-lg transition-all duration-300 rounded-2xl h-full flex flex-col">
-                  <CardHeader className="p-6">
+                
+                  <CardHeader className="p-6"><Card className="bg-white border border-gray-200 hover:border-blue-400 backdrop-blur-sm shadow-lg transition-all duration-300 rounded-2xl h-full flex flex-col">
                     <CardTitle className="text-2xl font-bold text-gray-900 mb-2">{scholarship.name}</CardTitle>
                     <CardDescription className="text-gray-700 text-base">{scholarship.provider}</CardDescription>
                   </CardHeader>
