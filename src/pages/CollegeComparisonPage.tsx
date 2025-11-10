@@ -242,7 +242,18 @@ const comparisonList: string[] = location.state?.comparisonList || [];
             
             <div className="overflow-x-auto">
               <div className="min-w-full">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div
+  className={`grid grid-cols-1 ${
+    selectedColleges.length === 2
+      ? "md:grid-cols-2"
+      : selectedColleges.length === 3
+      ? "md:grid-cols-3"
+      : selectedColleges.length >= 4
+      ? "md:grid-cols-4"
+      : "md:grid-cols-1"
+  } gap-6`}
+>
+
                   {selectedColleges.map((college, index) => {
                     const difficulty = getAdmissionDifficulty(college.admission_rate);
                     const DifficultyIcon = difficulty.icon;
