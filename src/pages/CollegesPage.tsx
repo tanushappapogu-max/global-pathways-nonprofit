@@ -228,7 +228,7 @@ export const CollegesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-blue-50 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
-        <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+        <motion.div className="text-center mb-16 pt-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
           <Badge className="mb-8 bg-blue-900 text-white border-0 px-8 py-3 text-base font-medium">
             <GraduationCap className="w-5 h-5 mr-2" />
             College Database
