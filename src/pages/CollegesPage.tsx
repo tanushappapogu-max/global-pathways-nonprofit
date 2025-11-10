@@ -33,7 +33,8 @@ import {
   ChevronDown,
   ChevronUp,
   Building2,
-  Target
+  Target,
+  ArrowUp
 } from 'lucide-react';
 
 interface College {
@@ -379,9 +380,16 @@ export const CollegesPage: React.FC = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           <AnimatePresence>
             {showTopButton && (
-              <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-8 right-8 bg-blue-900 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl z-50">
-                ↑ Top
-              </motion.button>
+               <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showTopButton ? 1 : 0 }}
+          transition={{ duration: 0.3 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl z-50 flex items-center justify-center"
+          style={{ pointerEvents: showTopButton ? 'auto' : 'none' }}
+        >
+          <ArrowUp className="w-6 h-6" />
+        </motion.button>
             )}
           </AnimatePresence>
 
