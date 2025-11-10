@@ -196,7 +196,7 @@ const comparisonList: string[] = location.state?.comparisonList || [];
       <Search className="h-6 w-6 mr-2 text-blue-900" />
       Add Colleges to Compare
     </CardTitle>
-    <CardDescription className="text-gray-600 text-base">
+    <CardDescription className="text-gray-600 hover:blue-500 text-base">
       Search and select up to 4 colleges to compare ({selectedColleges.length}/4 selected)
     </CardDescription>
   </CardHeader>
@@ -395,7 +395,7 @@ const comparisonList: string[] = location.state?.comparisonList || [];
 
                             {/* Actions */}
                             <div className="pt-4 border-t border-white/10">
-                              <Button variant="outline" className="w-full border-gray-400 text-black hover:bg-white-100" asChild>
+                              <Button variant="outline" className="w-full border-gray-400 text-black hover:blue-500" asChild>
                                 <a href={college.website_url} target="_blank" rel="noopener noreferrer">
                                   <ExternalLink className="h-4 w-4 mr-2" />
                                   Visit Website
@@ -418,11 +418,11 @@ const comparisonList: string[] = location.state?.comparisonList || [];
           <Card className="text-center py-16 bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
             <CardContent>
               <BarChart3 className="h-20 w-20 text-gray-400 mx-auto mb-6" />
-              <h3 className="text-3xl font-bold text-white mb-3">No Colleges Selected</h3>
-              <p className="text-gray-400 text-lg mb-8 max-w-md mx-auto">
+              <h3 className="text-3xl font-bold text-black mb-3">No Colleges Selected</h3>
+              <p className="text-gray-700 text-lg mb-8 max-w-md mx-auto">
                 Search and add colleges above to start comparing them side-by-side
               </p>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Button className="bg-blue-900 hover:blue-500">
                 <Search className="h-4 w-4 mr-2" />
                 Start Searching
               </Button>
