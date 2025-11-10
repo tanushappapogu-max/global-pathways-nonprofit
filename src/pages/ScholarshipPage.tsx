@@ -139,7 +139,7 @@ export const ScholarshipPage = () => {
     <div className="min-h-screen bg-blue-50 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
         {/* Header */}
-        <motion.div className="text-center mb-16 pt-16"
+        <motion.div className="text-center mb-16"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -261,8 +261,8 @@ export const ScholarshipPage = () => {
                 variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }}
                 whileHover={{ scale: 1.02 }}
               >
-                
-                  <CardHeader className="p-6"><Card className="bg-white border border-gray-200 hover:border-blue-400 backdrop-blur-sm shadow-lg transition-all duration-300 rounded-2xl h-full flex flex-col">
+                <Card className="bg-white border border-gray-200 hover:border-blue-400 backdrop-blur-sm shadow-lg transition-all duration-300 rounded-2xl h-full flex flex-col">
+                  <CardHeader className="p-6">
                     <CardTitle className="text-2xl font-bold text-gray-900 mb-2">{scholarship.name}</CardTitle>
                     <CardDescription className="text-gray-700 text-base">{scholarship.provider}</CardDescription>
                   </CardHeader>
