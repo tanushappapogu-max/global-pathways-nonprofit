@@ -139,8 +139,7 @@ const AboutPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+    <div className="min-h-screen bg-blue-50 relative overflow-hidden">
       <motion.div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 8, repeat: Infinity }} />
       <motion.div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }} transition={{ duration: 10, repeat: Infinity }} />
 
@@ -152,25 +151,25 @@ const AboutPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Badge className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-8 py-3 text-base font-medium">
+            <Badge className="mb-8 bg-blue-900 text-white border-0 px-8 py-3 text-base font-medium">
               <GraduationCap className="w-5 h-5 mr-2" />
               About Us
             </Badge>
             
             <h1 className="text-7xl md:text-8xl font-black mb-6 leading-tight">
-              <span className="block bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent mb-4">
+              <span className="block bg-black bg-clip-text text-transparent mb-4">
                 {hero.title.split(' ')[0]}
               </span>
-              <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="block bg-black bg-clip-text text-transparent">
                 {hero.title.split(' ').slice(1).join(' ')}
               </span>
             </h1>
             
-            <p className="text-2xl md:text-3xl mb-8 text-gray-300 font-semibold">
+            <p className="text-2xl md:text-3xl mb-8 text-gray-900 font-semibold">
               {hero.subtitle}
             </p>
             
-            <p className="text-xl max-w-3xl mx-auto leading-relaxed text-gray-400">
+            <p className="text-xl max-w-3xl mx-auto leading-relaxed text-gray-700">
               {hero.description}
             </p>
 
@@ -178,7 +177,7 @@ const AboutPage = () => {
               <div className="mt-12">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-6 text-lg font-semibold"
+                  className="bg-blue-900 hover:to-purple-700 text-white px-10 py-6 text-lg font-semibold"
                 >
                   {hero.cta_button.text || "Get Started"}
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -198,17 +197,17 @@ const AboutPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Card className="h-full bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300">
+              <Card className="h-full bg-white  border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300">
                 <CardHeader className="text-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-900 to-blue-900 flex items-center justify-center mx-auto mb-6 shadow-lg">
                     <Target className="h-10 w-10 text-white" />
                   </div>
-                  <CardTitle className="text-3xl font-bold text-white mb-4">
+                  <CardTitle className="text-3xl font-bold text-black mb-4">
                     {mission.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-300 leading-relaxed text-center text-lg">
+                  <p className="text-gray-700 leading-relaxed text-center text-lg">
                     {mission.content}
                   </p>
                 </CardContent>
@@ -220,17 +219,17 @@ const AboutPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Card className="h-full bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-purple-400/50 transition-all duration-300">
+              <Card className="h-full bg-white border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300">
                 <CardHeader className="text-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-900 to-blue-900 flex items-center justify-center mx-auto mb-6 shadow-lg">
                     <Eye className="h-10 w-10 text-white" />
                   </div>
-                  <CardTitle className="text-3xl font-bold text-white mb-4">
+                  <CardTitle className="text-3xl font-bold text-black mb-4">
                     {vision.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-300 leading-relaxed text-center text-lg">
+                  <p className="text-gray-700 leading-relaxed text-center text-lg">
                     {vision.content}
                   </p>
                 </CardContent>
@@ -245,7 +244,7 @@ const AboutPage = () => {
         <section className="py-16 px-4 relative">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+              <h2 className="text-4xl md:text-5xl font-black text-black mb-4">
                 {values.title}
               </h2>
             </div>
@@ -260,17 +259,17 @@ const AboutPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className="text-center bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300 h-full">
+                    <Card className="text-center bg-white border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300 h-full">
                       <CardHeader>
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <div className="w-16 h-16 rounded-full bg-blue-900 flex items-center justify-center mx-auto mb-4 shadow-lg">
                           <IconComponent className="h-8 w-8 text-white" />
                         </div>
-                        <CardTitle className="text-xl font-bold text-white">
+                        <CardTitle className="text-xl font-bold text-gray-900">
                           {value.title}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-gray-400 text-sm leading-relaxed">
+                        <p className="text-gray-700 text-sm leading-relaxed">
                           {value.description}
                         </p>
                       </CardContent>
@@ -288,7 +287,7 @@ const AboutPage = () => {
         <section className="py-16 px-4 relative">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+              <h2 className="text-4xl md:text-5xl font-black text-black mb-4">
                 {impact.title}
               </h2>
             </div>
@@ -301,19 +300,19 @@ const AboutPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="text-center bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300">
+                  <Card className="text-center bg-white border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300">
                     <CardContent className="pt-8 pb-8">
-                      <div className="text-5xl font-black text-blue-400 mb-3">
+                      <div className="text-5xl font-black text-blue-900 mb-3">
                         <CountUp 
                           end={stat.number} 
                           suffix={stat.suffix}
                           prefix={stat.prefix}
                         />
                       </div>
-                      <div className="text-xl font-bold text-white mb-2">
+                      <div className="text-xl font-bold text-gray-900 mb-2">
                         {stat.label}
                       </div>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-gray-700">
                         {stat.description}
                       </div>
                     </CardContent>
@@ -329,14 +328,14 @@ const AboutPage = () => {
       <section className="py-16 px-4 relative">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-black text-black mb-4">
               {story.title}
             </h2>
           </div>
 
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
+          <Card className="bg-white border-white/10 shadow-2xl">
             <CardContent className="p-8 md:p-12">
-              <div className="prose prose-lg max-w-none text-gray-300">
+              <div className="prose prose-lg max-w-none text-gray-700">
                 {story.content.split('\n').map((paragraph, index) => (
                   <p key={index} className="mb-6 leading-relaxed text-lg">
                     {paragraph}
@@ -346,7 +345,7 @@ const AboutPage = () => {
 
               {story.timeline && story.timeline.length > 0 && (
                 <div className="mt-12">
-                  <h3 className="text-3xl font-bold text-white mb-8">Our Journey</h3>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-8">Our Journey</h3>
                   <div className="space-y-6">
                     {story.timeline.map((milestone, index) => (
                       <motion.div
@@ -356,14 +355,14 @@ const AboutPage = () => {
                         transition={{ delay: index * 0.1 }}
                         className="flex items-start space-x-6"
                       >
-                        <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                        <div className="flex-shrink-0 w-20 h-20 bg-blue-900 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
                           {milestone.year}
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-xl font-semibold text-white mb-2">
+                          <h4 className="text-xl font-semibold text-gray-900 mb-2">
                             {milestone.milestone}
                           </h4>
-                          <p className="text-gray-400 leading-relaxed">
+                          <p className="text-gray-700 leading-relaxed">
                             {milestone.description}
                           </p>
                         </div>
@@ -383,10 +382,10 @@ const AboutPage = () => {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-5xl md:text-6xl font-black mb-6">
-                <span className="block bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent mb-4">Meet Our</span>
-                <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Team</span>
+                <span className="block bg-black bg-clip-text text-transparent mb-4">Meet Our</span>
+                <span className="block bg-black bg-clip-text text-transparent">Team</span>
               </h2>
-              <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
+              <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto">
                 The passionate people behind Global Pathways, dedicated to your success
               </p>
             </div>
@@ -399,9 +398,9 @@ const AboutPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="text-center bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300 group h-full">
+                  <Card className="text-center bg-white border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300 group h-full">
                     <CardHeader className="pb-4">
-                      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-32 h-32 rounded-full bg-blue-900 flex items-center justify-center mx-auto mb-6 overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300">
                         {member.image_url ? (
                           <img 
                             src={member.image_url.startsWith('http') ? member.image_url : `${supabase.supabaseUrl}/storage/v1/object/public/team-images/${member.image_url}`}
@@ -417,27 +416,27 @@ const AboutPage = () => {
                           <Users className="h-16 w-16 text-white" />
                         </div>
                       </div>
-                      <CardTitle className="text-xl font-bold text-white mb-2">
+                      <CardTitle className="text-xl font-bold text-black mb-2">
                         {member.name}
                       </CardTitle>
-                      <CardDescription className="text-blue-300 font-medium text-base">
+                      <CardDescription className="text-blue-900 font-medium text-base">
                         {member.position}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <p className="text-gray-400 text-sm mb-6 leading-relaxed line-clamp-4">
+                      <p className="text-gray-700 text-sm mb-6 leading-relaxed line-clamp-4">
                         {member.bio}
                       </p>
                       <div className="flex justify-center space-x-3">
                         {member.email && (
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10 hover:text-white" asChild>
+                          <Button variant="ghost" size="sm" className="text-gray-900 hover:bg-blue-400" asChild>
                             <a href={`mailto:${member.email}`}>
                               <Mail className="h-4 w-4" />
                             </a>
                           </Button>
                         )}
                         {member.linkedin_url && (
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10 hover:text-white" asChild>
+                          <Button variant="ghost" size="sm" className="text-gray-900 hover:bg-white/10 hover:text-blue-500" asChild>
                             <a href={member.linkedin_url} target="_blank" rel="noopener noreferrer">
                               <Linkedin className="h-4 w-4" />
                             </a>
@@ -463,12 +462,12 @@ const AboutPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 + (index * 0.1) }}
                 >
-                  <Card className="text-center bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
+                  <Card className="text-center bg-white border-white/10 shadow-2xl">
                     <CardContent className="pt-8 pb-8">
-                      <div className="text-5xl font-black text-blue-400 mb-3">
+                      <div className="text-5xl font-black text-blue-900 mb-3">
                         <CountUp end={stat.end} suffix={stat.suffix} />
                       </div>
-                      <div className="text-gray-300 text-lg">{stat.label}</div>
+                      <div className="text-gray-700 text-lg">{stat.label}</div>
                     </CardContent>
                   </Card>
                 </motion.div>
