@@ -100,7 +100,7 @@ export const Navigation: React.FC = () => {
                 {logo.show_icon && (
                   <div className="relative">
                     <img 
-                      src="/images/favicon.ico" 
+                      src="/images/favicon.svg" 
                       alt="Logo" 
                       className="h-7 w-7 transition-all duration-300"
                     />
