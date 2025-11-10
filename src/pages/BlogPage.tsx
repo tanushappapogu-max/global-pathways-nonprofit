@@ -118,38 +118,33 @@ const BlogPage = () => {
 
   const renderMarkdown = (content) => {
     return content
-      .replace(/^# (.*$)/gim, '<h1 class="text-4xl font-bold mb-6 text-black">$1</h1>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-3xl font-bold mb-4 mt-8 text-black">$1</h2>')
-      .replace(/^### (.*$)/gim, '<h3 class="text-2xl font-bold mb-3 mt-6 text-black">$1</h3>')
-      .replace(/\*\*(.*)\*\*/gim, '<strong class="font-bold text-black">$1</strong>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-4xl font-bold mb-6 text-gray-900">$1</h1>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-3xl font-bold mb-4 mt-8 text-gray-900">$1</h2>')
+      .replace(/^### (.*$)/gim, '<h3 class="text-2xl font-bold mb-3 mt-6 text-gray-900">$1</h3>')
+      .replace(/\*\*(.*)\*\*/gim, '<strong class="font-bold text-gray-900">$1</strong>')
       .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
-      .replace(/^\- (.*$)/gim, '<li class="ml-4 text-gray-300">• $1</li>')
+      .replace(/^\- (.*$)/gim, '<li class="ml-4 text-gray-700">• $1</li>')
       .replace(/\n/gim, '<br>');
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-300 text-lg">Loading blog content...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto mb-4"></div>
+          <p className="text-gray-700 text-lg">Loading blog content...</p>
         </div>
       </div>
     );
   }
 
-  // Individual Article View
   if (slug && currentArticle) {
     return (
       <div className="min-h-screen bg-blue-50 relative overflow-hidden pt-16">
-
-        <motion.div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-900 rounded-full blur-3xl" animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 8, repeat: Infinity }} />
-        <motion.div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-900 rounded-full blur-3xl" animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }} transition={{ duration: 10, repeat: Infinity }} />
-
         <div className="max-w-4xl mx-auto px-4 py-16 relative">
           <div className="mb-8">
             <Link to="/blog">
-              <Button variant="outline" className="border-gray-200 bg-white text-black hover:bg-gray-200">
+              <Button variant="outline" className="border-gray-300 bg-white text-gray-900 hover:bg-gray-100">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Blog
               </Button>
@@ -161,7 +156,7 @@ const BlogPage = () => {
               <img 
                 src={currentArticle.featured_image} 
                 alt={currentArticle.title}
-                className="w-full h-96 object-cover rounded-xl mb-8 shadow-2xl"
+                className="w-full h-96 object-cover rounded-xl mb-8 shadow-lg"
               />
             )}
             
@@ -183,7 +178,7 @@ const BlogPage = () => {
               )}
             </div>
 
-            <h1 className="text-5xl md:text-6xl font-black text-black mb-6 leading-tight">
+            <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-tight">
               {currentArticle.title}
             </h1>
 
@@ -194,7 +189,7 @@ const BlogPage = () => {
             )}
 
             {currentArticle.author_name && (
-              <Card className="mb-8 bg-white border-white/10">
+              <Card className="mb-8 bg-white border-gray-200 shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     {currentArticle.author_image ? (
@@ -209,7 +204,7 @@ const BlogPage = () => {
                       </div>
                     )}
                     <div>
-                      <p className="font-semibold text-black text-lg">{currentArticle.author_name}</p>
+                      <p className="font-semibold text-gray-900 text-lg">{currentArticle.author_name}</p>
                       {currentArticle.author_bio && (
                         <p className="text-sm text-gray-700">{currentArticle.author_bio}</p>
                       )}
@@ -220,22 +215,22 @@ const BlogPage = () => {
             )}
           </div>
 
-          <Card className="bg-white border-gray-200 shadow-2xl mb-8">
+          <Card className="bg-white border-gray-200 shadow-lg mb-8">
             <CardContent className="p-8 md:p-12">
               <div 
-                className="prose prose-lg max-w-none text-gray-700 leading-relaxed prose-headings:text-black prose-strong:text-white prose-a:text-blue-400"
+                className="prose prose-lg max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-strong:text-gray-900 prose-a:text-blue-900"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(currentArticle.content) }}
               />
             </CardContent>
           </Card>
 
           {currentArticle.tags && currentArticle.tags.length > 0 && (
-            <Card className="bg-white border-gray-200">
+            <Card className="bg-white border-gray-200 shadow-lg">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-black mb-4">Tags</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {currentArticle.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="border-blue-400/30 text-blue-400">
+                    <Badge key={index} variant="outline" className="border-blue-300 text-blue-900">
                       <Tag className="h-3 w-3 mr-1" />
                       {tag}
                     </Badge>
@@ -249,37 +244,32 @@ const BlogPage = () => {
     );
   }
 
-  // Blog List View
   return (
     <div className="min-h-screen bg-blue-50 relative overflow-hidden">
-      <motion.div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 8, repeat: Infinity }} />
-      <motion.div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }} transition={{ duration: 10, repeat: Infinity }} />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
         <motion.div className="text-center mb-16 pt-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
           <Badge className="mb-8 bg-blue-900 text-white border-0 px-8 py-3 text-base font-medium">
             <Newspaper className="w-5 h-5 mr-2" />
             Blog & Resources
           </Badge>
-                    <h1 className="text-7xl md:text-8xl font-black mb-6 leading-[1.3] overflow-visible">
-                      <span className="block text-gray-900 mb-4">Our</span>
-                      <span className="block text-gray-900">Blog</span>
-                    </h1>
+          <h1 className="text-7xl md:text-8xl font-black mb-6 leading-[1.3] overflow-visible">
+            <span className="block text-gray-900 mb-4">Our</span>
+            <span className="block text-gray-900">Blog</span>
+          </h1>
           <p className="text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed">
             Expert insights, tips, and guidance for your educational journey
           </p>
         </motion.div>
 
-        {/* Search and Filters */}
         <div className="mb-12 flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 h-5 w-5" />
               <Input
                 placeholder="Search articles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white text-black placeholder:text-gray-400 h-12"
+                className="pl-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12"
               />
             </div>
           </div>
@@ -287,7 +277,7 @@ const BlogPage = () => {
             <Button
               variant={selectedCategory === '' ? 'default' : 'outline'}
               onClick={() => setSelectedCategory('')}
-              className={selectedCategory === '' ? 'bg-blue-900 hover:bg-blue-500' : 'border-gray-200 bg-white text-black hover:blue-500'}
+              className={selectedCategory === '' ? 'bg-blue-900 hover:bg-blue-500 text-white' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'}
             >
               All
             </Button>
@@ -296,7 +286,7 @@ const BlogPage = () => {
                 key={category}
                 variant={selectedCategory === category ? 'default' : 'outline'}
                 onClick={() => setSelectedCategory(category)}
-                className={selectedCategory === category ? 'bg-blue-900' : 'border-white/20 bg-white text-black hover:blue-500'}
+                className={selectedCategory === category ? 'bg-blue-900 hover:bg-blue-500 text-white' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'}
               >
                 {category}
               </Button>
@@ -304,10 +294,9 @@ const BlogPage = () => {
           </div>
         </div>
 
-        {/* Featured Articles */}
         {articles.filter(article => article.is_featured).length > 0 && (
           <div className="mb-16">
-            <h2 className="text-4xl font-black text-Black mb-8">Featured Articles</h2>
+            <h2 className="text-4xl font-black text-gray-900 mb-8">Featured Articles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {articles
                 .filter(article => article.is_featured)
@@ -319,7 +308,7 @@ const BlogPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className="h-full bg-white border-gray-200 shadow-2xl hover:border-blue-400/50 transition-all duration-300 group">
+                    <Card className="h-full bg-white border-gray-200 shadow-lg hover:border-blue-400 transition-all duration-300 group">
                       {article.featured_image && (
                         <div className="aspect-video overflow-hidden rounded-t-xl">
                           <img 
@@ -332,7 +321,7 @@ const BlogPage = () => {
                       <CardHeader>
                         <div className="flex items-center justify-between mb-3">
                           {article.category && (
-                            <Badge className="bg-blue-500/20 text-blue-500 border-blue-400/30">
+                            <Badge className="bg-blue-100 text-blue-900 border-blue-300">
                               {article.category}
                             </Badge>
                           )}
@@ -341,7 +330,7 @@ const BlogPage = () => {
                             {formatDate(article.published_at)}
                           </div>
                         </div>
-                        <CardTitle className="group-hover:text-blue-400 transition-colors text-black text-xl">
+                        <CardTitle className="group-hover:text-blue-900 transition-colors text-gray-900 text-xl">
                           <Link to={`/blog/${article.slug}`}>
                             {article.title}
                           </Link>
@@ -369,7 +358,7 @@ const BlogPage = () => {
                             )}
                           </div>
                           <Link to={`/blog/${article.slug}`}>
-                            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-white/10">
+                            <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-500 hover:bg-blue-50">
                               Read More
                             </Button>
                           </Link>
@@ -382,17 +371,16 @@ const BlogPage = () => {
           </div>
         )}
 
-        {/* All Articles */}
         <div>
-          <h2 className="text-4xl font-black text-black mb-8">
+          <h2 className="text-4xl font-black text-gray-900 mb-8">
             {searchTerm || selectedCategory ? 'Search Results' : 'Latest Articles'}
           </h2>
           
           {filteredArticles.length === 0 ? (
-            <Card className="bg-white border border-gray-200 shadow-2xl">
+            <Card className="bg-white border-gray-200 shadow-lg">
               <CardContent className="text-center py-16">
-                <BookOpen className="h-16 w-16 text-gray-700 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-black mb-2">No articles found</h3>
+                <BookOpen className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">No articles found</h3>
                 <p className="text-gray-700">Try adjusting your search or filter criteria.</p>
               </CardContent>
             </Card>
@@ -405,7 +393,7 @@ const BlogPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="h-full bg-white border border-white/10 shadow-2xl hover:border-blue-400/50 transition-all duration-300 group">
+                  <Card className="h-full bg-white border-gray-200 shadow-lg hover:border-blue-400 transition-all duration-300 group">
                     {article.featured_image && (
                       <div className="aspect-video overflow-hidden rounded-t-xl">
                         <img 
@@ -418,7 +406,7 @@ const BlogPage = () => {
                     <CardHeader>
                       <div className="flex items-center justify-between mb-3">
                         {article.category && (
-                          <Badge className="bg-blue-500/20 text-blue-500 border-blue-400/30">
+                          <Badge className="bg-blue-100 text-blue-900 border-blue-300">
                             {article.category}
                           </Badge>
                         )}
@@ -427,7 +415,7 @@ const BlogPage = () => {
                           {formatDate(article.published_at)}
                         </div>
                       </div>
-                      <CardTitle className="group-hover:text-blue-400 transition-colors text-black text-xl">
+                      <CardTitle className="group-hover:text-blue-900 transition-colors text-gray-900 text-xl">
                         <Link to={`/blog/${article.slug}`}>
                           {article.title}
                         </Link>
@@ -455,7 +443,7 @@ const BlogPage = () => {
                           )}
                         </div>
                         <Link to={`/blog/${article.slug}`}>
-                          <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-white/10">
+                          <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-500 hover:bg-blue-50">
                             Read More
                           </Button>
                         </Link>
