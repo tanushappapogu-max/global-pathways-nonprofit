@@ -196,7 +196,7 @@ const comparisonList: string[] = location.state?.comparisonList || [];
       <Search className="h-6 w-6 mr-2 text-blue-900" />
       Add Colleges to Compare
     </CardTitle>
-    <CardDescription className="text-gray-600 hover:blue-500 text-base">
+    <CardDescription className="text-gray-600 text-base">
       Search and select up to 4 colleges to compare ({selectedColleges.length}/4 selected)
     </CardDescription>
   </CardHeader>
@@ -395,7 +395,7 @@ const comparisonList: string[] = location.state?.comparisonList || [];
 
                             {/* Actions */}
                             <div className="pt-4 border-t border-white/10">
-                              <Button variant="outline" className="w-full border-gray-400 text-black hover:blue-500" asChild>
+                              <Button variant="outline" className="w-full border-gray-400 text-black hover:" asChild>
                                 <a href={college.website_url} target="_blank" rel="noopener noreferrer">
                                   <ExternalLink className="h-4 w-4 mr-2" />
                                   Visit Website
