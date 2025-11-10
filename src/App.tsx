@@ -14,7 +14,6 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { CollegesPage } from "./pages/CollegesPage";
 import { FAFSAPage } from "./pages/FAFSAPage";
 import { TimelinePage } from "./pages/TimelinePage";
-import { ComparisonPage } from "./pages/ComparisonPage";
 import { CollegeComparisonPage } from "./pages/CollegeComparisonPage";
 import BlogPage from "./pages/BlogPage";
 import AboutPage from "./pages/AboutPage";
@@ -50,7 +49,6 @@ const App = () => (
                 <Route path="/colleges" element={<CollegesPage />} />
                 <Route path="/fafsa" element={<FAFSAPage />} />
                 <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/comparison" element={<ComparisonPage />} />
                 <Route path="/college-comparison" element={<CollegeComparisonPage />} />
                 <Route path="/impact" element={<ImpactPage />} />
                 <Route path="/counselor-portal" element={<CounselorPortalPage />} />

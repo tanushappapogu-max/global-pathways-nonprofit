@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from "react-router-dom";
+
 import { CountUp } from '@/components/animations/CountUp';
 import { 
   Search, 
@@ -62,6 +64,16 @@ export const CollegeComparisonPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredColleges, setFilteredColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
+const location = useLocation();
+const comparisonList: string[] = location.state?.comparisonList || [];
+
+  useEffect(() => {
+  if (colleges.length > 0 && comparisonList.length > 0) {
+    const selected = colleges.filter(c => comparisonList.includes(c.id));
+    setSelectedColleges(selected);
+  }
+}, [colleges, comparisonList]);
+
 
   useEffect(() => {
     loadColleges();
