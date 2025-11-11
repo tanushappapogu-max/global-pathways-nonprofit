@@ -99,7 +99,9 @@ export const CollegesPage: React.FC = () => {
     { value: 'state_school', label: 'State Universities' },
     { value: 'liberal_arts', label: 'Liberal Arts Colleges' },
     { value: 'technical', label: 'Technical Schools' },
-    { value: 'community', label: 'Community Colleges' }
+    { value: 'community', label: 'Community Colleges'}, 
+    { value: 'private' , label: 'Private' }
+  
   ];
 
   const states = [
@@ -270,6 +272,7 @@ export const CollegesPage: React.FC = () => {
       case 'liberal_arts': return 'bg-orange-100 text-orange-900 border-orange-300';
       case 'technical': return 'bg-red-100 text-red-900 border-red-300';
       case 'community': return 'bg-gray-100 text-gray-900 border-gray-300';
+      case 'private' : return 'bg-pink-100 text-pink-900 border-pink-300';
       default: return 'bg-gray-100 text-gray-900 border-gray-300';
     }
   };
