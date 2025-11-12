@@ -10,10 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { trackToolUsage, completeToolUsage } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar, Search
+  Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar, Search, Heart
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 
@@ -31,7 +30,6 @@ export const AutoScholarshipFinderPage = () => {
   });
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [usageTrackingId, setUsageTrackingId] = useState<string | null>(null);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -60,17 +58,6 @@ export const AutoScholarshipFinderPage = () => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    
-    const usageTracking = await trackToolUsage({
-      toolName: 'scholarship_finder',
-      inputData: formData,
-      userId: user?.id,
-      userEmail: user?.email
-    });
-
-    if (usageTracking?.id) {
-      setUsageTrackingId(usageTracking.id);
-    }
 
     try {
       console.log('Starting scholarship matching...');
@@ -81,27 +68,10 @@ export const AutoScholarshipFinderPage = () => {
       if (scholarships && scholarships.length > 0) {
         console.log('Scholarships found:', scholarships.length);
         setResults(scholarships);
-        
-        if (usageTracking?.id) {
-          await completeToolUsage(usageTracking.id, scholarships.length, {
-            top_matches: scholarships.slice(0, 5).map(r => ({
-              name: r.name,
-              match_percentage: r.matchPercentage || r.match,
-              amount: r.amount
-            }))
-          });
-        }
       } else {
         console.log('No scholarships found, using mock results');
         const mockResults = getMockResults();
         setResults(mockResults);
-        
-        if (usageTracking?.id) {
-          await completeToolUsage(usageTracking.id, mockResults.length, {
-            fallback: true,
-            reason: 'no_results_found'
-          });
-        }
       }
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -109,15 +79,6 @@ export const AutoScholarshipFinderPage = () => {
       console.error('Error in handleSubmit:', error);
       const mockResults = getMockResults();
       setResults(mockResults);
-      
-      if (usageTracking?.id) {
-        await completeToolUsage(usageTracking.id, mockResults.length, {
-          fallback: true,
-          error: 'matching_failed',
-          error_message: error.message
-        });
-      }
-      
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
@@ -128,7 +89,13 @@ export const AutoScholarshipFinderPage = () => {
   const saveMatches = async () => {
     try {
       if (!user) {
-        localStorage.setItem('savedMatches', JSON.stringify(results));
+        // Save to localStorage for non-logged-in users
+        const savedIds = results.map(s => `${s.name}-${s.provider}`);
+        const existingSaved = localStorage.getItem('savedScholarshipIds');
+        const existing = existingSaved ? JSON.parse(existingSaved) : [];
+        const combined = [...new Set([...existing, ...savedIds])];
+        localStorage.setItem('savedScholarshipIds', JSON.stringify(combined));
+        
         toast({
           title: "Matches Saved!",
           description: "Your scholarship matches have been saved locally. Sign in to save them to your account."
@@ -136,24 +103,31 @@ export const AutoScholarshipFinderPage = () => {
         return;
       }
 
-  const matchesToSave = results.map(scholarship => ({
+      const matchesToSave = results.map(scholarship => ({
         user_id: user.id,
         scholarship_name: scholarship.name,
         provider: scholarship.provider,
-        amount: scholarship.amount,
+        amount: Number(scholarship.amount) || 0,
         deadline: scholarship.deadline,
-        match_percentage: Math.round(scholarship.match),
         description: scholarship.description,
-        url: scholarship.url,
-        requirements: scholarship.requirements,
-        saved_at: new Date().toISOString()
+        url: scholarship.url
       }));
 
       const { error } = await supabase
         .from('saved_scholarships')
-        .insert(matchesToSave);
+        .upsert(matchesToSave, {
+          onConflict: 'user_id,scholarship_name',
+          ignoreDuplicates: false
+        });
 
       if (error) throw error;
+
+      // Also save to localStorage
+      const savedIds = results.map(s => `${s.name}-${s.provider}`);
+      const existingSaved = localStorage.getItem('savedScholarshipIds');
+      const existing = existingSaved ? JSON.parse(existingSaved) : [];
+      const combined = [...new Set([...existing, ...savedIds])];
+      localStorage.setItem('savedScholarshipIds', JSON.stringify(combined));
 
       toast({
         title: "Success!",
@@ -172,17 +146,21 @@ export const AutoScholarshipFinderPage = () => {
 
   const getMockResults = () => {
     const baseResults = [
-      { name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2024-03-15", description: "For high-achieving students with strong academic records", url: "https://example.com/merit-scholarship", requirements: ["3.5+ GPA", "Leadership experience", "Community service"] },
-      { name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2024-04-01", description: "Supporting students pursuing STEM fields", url: "https://example.com/stem-award", requirements: ["STEM major", "Research experience", "Innovation project"] },
-      { name: "Community Leadership Grant", amount: 7500, provider: "Community Foundation", match: 82, deadline: "2024-02-28", description: "For students with demonstrated community involvement", url: "https://example.com/community-grant", requirements: ["100+ volunteer hours", "Leadership role", "Community impact"] },
-      { name: "First Generation College Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2024-05-01", description: "Supporting first-generation college students", url: "https://example.com/first-gen", requirements: ["First-generation status", "Financial need", "Academic potential"] },
-      { name: "Diversity & Inclusion Scholarship", amount: 8000, provider: "Diversity Institute", match: 85, deadline: "2024-03-30", description: "Promoting diversity in higher education", url: "https://example.com/diversity", requirements: ["Underrepresented background", "Diversity advocacy", "Academic merit"] }
+      { name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2025-03-15", description: "For high-achieving students with strong academic records", url: "https://example.com/merit-scholarship", requirements: ["3.5+ GPA", "Leadership experience", "Community service"] },
+      { name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2025-04-01", description: "Supporting students pursuing STEM fields", url: "https://example.com/stem-award", requirements: ["STEM major", "Research experience", "Innovation project"] },
+      { name: "Community Leadership Grant", amount: 7500, provider: "Community Foundation", match: 82, deadline: "2025-02-28", description: "For students with demonstrated community involvement", url: "https://example.com/community-grant", requirements: ["100+ volunteer hours", "Leadership role", "Community impact"] },
+      { name: "First Generation College Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2025-05-01", description: "Supporting first-generation college students", url: "https://example.com/first-gen", requirements: ["First-generation status", "Financial need", "Academic potential"] },
+      { name: "Diversity & Inclusion Scholarship", amount: 8000, provider: "Diversity Institute", match: 85, deadline: "2025-03-30", description: "Promoting diversity in higher education", url: "https://example.com/diversity", requirements: ["Underrepresented background", "Diversity advocacy", "Academic merit"] }
     ];
+    
     return baseResults.filter(s => {
       if (s.name.includes("First Generation") && !formData.firstGeneration) return false;
       if (s.name.includes("STEM") && !formData.major.toLowerCase().includes('engineering') && !formData.major.toLowerCase().includes('science') && !formData.major.toLowerCase().includes('math')) return false;
       return true;
-    }).map(s => ({ ...s, match: Math.max(75, s.match - Math.random() * 10) }));
+    }).map(s => ({ 
+      ...s, 
+      match: Math.max(75, s.match - Math.random() * 10) 
+    }));
   };
 
   const stats = [
@@ -260,7 +238,7 @@ export const AutoScholarshipFinderPage = () => {
                   </div>
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">ACT Score (optional)</Label>
-                    <Input type="number" min="1" max="36" placeholder="32" value={formData.actScore} onChange={(e) => handleInputChange('satScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input type="number" min="1" max="36" placeholder="32" value={formData.actScore} onChange={(e) => handleInputChange('actScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
                   </div>
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Class Rank (if known)</Label>
@@ -568,8 +546,8 @@ export const AutoScholarshipFinderPage = () => {
                     ))}
                     <div className="text-center pt-8 space-y-4">
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button className="bg-blue-900 hover:bg-blue-800 text-white px-8 py-6 text-lg" onClick={saveMatches}>
-                          <CheckCircle className="mr-2 h-5 w-5" />
+                        <Button className="bg-pink-600 hover:bg-pink-500 text-white px-8 py-6 text-lg" onClick={saveMatches}>
+                          <Heart className="mr-2 h-5 w-5" />
                           Save to Dashboard
                         </Button>
                         <Button variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white px-8 py-6 text-lg" asChild>
