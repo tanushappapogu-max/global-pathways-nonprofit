@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Zap, ArrowRight, CheckCircle, Brain, Calendar, Search, Heart
+  Zap, ArrowRight, CheckCircle, Brain, Calendar, Heart
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 
@@ -62,17 +62,26 @@ export const AutoScholarshipFinderPage = () => {
     try {
       console.log('Starting scholarship matching...');
       
-      const { matchScholarships } = await import('@/api/scholarshipMatcher');
-      const scholarships = await matchScholarships(formData);
+      // Get matches from database first
+      let scholarships = await matchScholarshipsFromDatabase(formData);
       
+      console.log('Database scholarships found:', scholarships?.length || 0);
+
+      // If we have fewer than 8, supplement with AI
+      if (!scholarships || scholarships.length < 8) {
+        console.log('Getting AI scholarships to reach minimum 8...');
+        const aiScholarships = await getAIScholarships(formData, 8 - (scholarships?.length || 0));
+        scholarships = [...(scholarships || []), ...aiScholarships];
+      }
+
       if (scholarships && scholarships.length > 0) {
-        console.log('Scholarships found:', scholarships.length);
+        console.log('Total scholarships:', scholarships.length);
         setResults(scholarships);
       } else {
-        console.log('No scholarships found, using mock results');
         const mockResults = getMockResults();
         setResults(mockResults);
       }
+      
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
@@ -86,86 +95,368 @@ export const AutoScholarshipFinderPage = () => {
     }
   };
 
+  const matchScholarshipsFromDatabase = async (profile) => {
+    try {
+      // Fetch all scholarships from database
+      const { data: allScholarships, error } = await supabase
+        .from('scholarships')
+        .select('*')
+        .order('amount', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Database error:', error);
+        return [];
+      }
+
+      if (!allScholarships || allScholarships.length === 0) {
+        return [];
+      }
+
+      // Filter and match scholarships
+      const matches = allScholarships
+        .filter(scholarship => {
+          // STRICT FILTERING - Remove scholarships that don't match basic criteria
+          
+          // Gender filtering
+          if (scholarship.eligibility && scholarship.name) {
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            const nameLower = scholarship.name.toLowerCase();
+            const combined = eligibilityLower + ' ' + nameLower;
+            
+            // Filter out women-only scholarships for non-female users
+            if (profile.gender !== 'female' && 
+                (combined.includes('women') || 
+                 combined.includes('woman') || 
+                 combined.includes('female') ||
+                 combined.includes('she/her'))) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - women only, user is ${profile.gender}`);
+              return false;
+            }
+            
+            // Filter out men-only scholarships for non-male users
+            if (profile.gender !== 'male' && 
+                (combined.includes('men only') || 
+                 combined.includes('male only'))) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - men only`);
+              return false;
+            }
+          }
+          
+          // Ethnicity filtering - only if scholarship is ethnicity-specific and user doesn't match
+          if (scholarship.eligibility) {
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            const profileEthnicityLower = profile.ethnicity?.toLowerCase() || '';
+            
+            // Check if scholarship is ethnicity-specific
+            const isHispanicOnly = eligibilityLower.includes('hispanic') || eligibilityLower.includes('latino');
+            const isBlackOnly = eligibilityLower.includes('black') || eligibilityLower.includes('african american');
+            const isAsianOnly = eligibilityLower.includes('asian') && !eligibilityLower.includes('all');
+            const isNativeOnly = eligibilityLower.includes('native american') || eligibilityLower.includes('indigenous');
+            
+            // Filter if scholarship is ethnicity-specific and user doesn't match
+            if (isHispanicOnly && !profileEthnicityLower.includes('hispanic') && !profileEthnicityLower.includes('latino')) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - Hispanic/Latino only`);
+              return false;
+            }
+            if (isBlackOnly && !profileEthnicityLower.includes('black') && !profileEthnicityLower.includes('african')) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - Black/African American only`);
+              return false;
+            }
+            if (isAsianOnly && !profileEthnicityLower.includes('asian') && !profileEthnicityLower.includes('pacific')) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - Asian only`);
+              return false;
+            }
+            if (isNativeOnly && !profileEthnicityLower.includes('native')) {
+              console.log(`🚫 Filtered out "${scholarship.name}" - Native American only`);
+              return false;
+            }
+          }
+          
+          return true; // Scholarship passes all filters
+        })
+        .map(scholarship => {
+          let matchScore = 50; // Base score
+
+          // Check major match
+          if (profile.major && scholarship.eligibility) {
+            const majorLower = profile.major.toLowerCase();
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            const nameLower = scholarship.name?.toLowerCase() || '';
+            
+            // Check for major match
+            if (eligibilityLower.includes(majorLower)) {
+              matchScore += 25;
+            }
+            
+            // STEM major boost
+            const isStemMajor = majorLower.includes('engineering') || 
+                               majorLower.includes('science') || 
+                               majorLower.includes('math') || 
+                               majorLower.includes('computer') ||
+                               majorLower.includes('biology') ||
+                               majorLower.includes('biomedical') ||
+                               majorLower.includes('chemical') ||
+                               majorLower.includes('mechanical');
+            
+            const isStemScholarship = eligibilityLower.includes('stem') || 
+                                     eligibilityLower.includes('engineering') ||
+                                     eligibilityLower.includes('science') ||
+                                     nameLower.includes('stem') ||
+                                     nameLower.includes('engineering');
+            
+            if (isStemMajor && isStemScholarship) {
+              matchScore += 20;
+            }
+            
+            // Biomedical/Bio engineering specific
+            if ((majorLower.includes('bio') || majorLower.includes('biomedical')) &&
+                (eligibilityLower.includes('bio') || nameLower.includes('bio'))) {
+              matchScore += 15;
+            }
+          }
+
+          // Gender match bonus (not filter)
+          if (profile.gender && scholarship.eligibility) {
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            const nameLower = scholarship.name?.toLowerCase() || '';
+            
+            // Only give bonus if scholarship specifically mentions gender positively
+            if (profile.gender === 'male' && 
+                (eligibilityLower.includes('male students') || 
+                 nameLower.includes('male scholars'))) {
+              matchScore += 15;
+            }
+          }
+
+          // First generation boost
+          if (profile.firstGeneration && scholarship.name) {
+            const nameLower = scholarship.name.toLowerCase();
+            const eligibilityLower = scholarship.eligibility?.toLowerCase() || '';
+            if (nameLower.includes('first generation') || 
+                nameLower.includes('first-generation') ||
+                eligibilityLower.includes('first generation')) {
+              matchScore += 25;
+            }
+          }
+
+          // Ethnicity match bonus
+          if (profile.ethnicity && scholarship.eligibility) {
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            const nameLower = scholarship.name?.toLowerCase() || '';
+            const ethnicityLower = profile.ethnicity.toLowerCase();
+            
+            // Give bonus for matching ethnicity
+            if (eligibilityLower.includes(ethnicityLower) ||
+                (ethnicityLower.includes('asian') && (eligibilityLower.includes('asian') || eligibilityLower.includes('aapi'))) ||
+                (ethnicityLower.includes('pacific') && eligibilityLower.includes('pacific')) ||
+                (ethnicityLower.includes('indian') && (eligibilityLower.includes('indian') || eligibilityLower.includes('south asian')))) {
+              matchScore += 25;
+            }
+          }
+
+          // State/region match
+          if (profile.state && scholarship.region) {
+            const regionLower = scholarship.region.toLowerCase();
+            const stateLower = profile.state.toLowerCase();
+            if (regionLower.includes(stateLower)) {
+              matchScore += 15;
+            }
+          }
+
+          // GPA bonus
+          if (profile.gpa && scholarship.eligibility) {
+            const gpaNum = parseFloat(profile.gpa);
+            const eligibilityLower = scholarship.eligibility.toLowerCase();
+            
+            if (gpaNum >= 3.5 && eligibilityLower.includes('3.5')) {
+              matchScore += 10;
+            } else if (gpaNum >= 3.0 && eligibilityLower.includes('3.0')) {
+              matchScore += 10;
+            }
+          }
+
+          // Cap at 95%
+          matchScore = Math.min(95, matchScore);
+
+          console.log(`✅ Matched "${scholarship.name}" with ${matchScore}% score`);
+
+          return {
+            name: scholarship.name,
+            provider: scholarship.provider || 'Various',
+            amount: scholarship.amount || 5000,
+            deadline: scholarship.deadline || '2026-06-30',
+            description: scholarship.description || 'Scholarship opportunity',
+            url: scholarship.application_url || scholarship.link || 'https://example.com',
+            match: matchScore,
+            requirements: scholarship.eligibility ? [scholarship.eligibility] : ['Check eligibility requirements']
+          };
+        });
+
+      // Sort by match score and return top matches
+      const topMatches = matches
+        .filter(m => m.match >= 65) // Only show good matches
+        .sort((a, b) => b.match - a.match)
+        .slice(0, 8);
+
+      console.log(`📊 Final matches: ${topMatches.length} scholarships`);
+      return topMatches;
+
+    } catch (error) {
+      console.error('Error matching scholarships:', error);
+      return [];
+    }
+  };
+
+  const getAIScholarships = async (profile, minCount) => {
+    try {
+      const prompt = `Find ${minCount} scholarships for a student with this profile:
+- Major: ${profile.major}
+- GPA: ${profile.gpa}
+- Ethnicity: ${profile.ethnicity}
+- Gender: ${profile.gender}
+- State: ${profile.state}
+- First Generation: ${profile.firstGeneration}
+- Interests: ${profile.extracurriculars}
+
+Return ONLY a JSON array with this exact structure (no markdown, no extra text):
+[{
+  "name": "Scholarship Name",
+  "provider": "Organization Name",
+  "amount": 5000,
+  "deadline": "2026-03-15",
+  "description": "Brief description",
+  "url": "https://example.com/apply",
+  "match": 85,
+  "requirements": ["Requirement 1", "Requirement 2"]
+}]`;
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        })
+      });
+
+      const data = await response.json();
+      const content = data.content?.[0]?.text || '[]';
+      
+      // Clean up any markdown formatting
+      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const aiScholarships = JSON.parse(cleanContent);
+      
+      console.log('AI generated scholarships:', aiScholarships.length);
+      return aiScholarships;
+    } catch (error) {
+      console.error('Error getting AI scholarships:', error);
+      return [];
+    }
+  };
+
   const saveMatches = async () => {
     try {
       if (!user) {
-        const savedIds = results.map(s => `${s.name}-${s.provider}`);
-        const existingSaved = localStorage.getItem('savedScholarshipIds');
-        const existing = existingSaved ? JSON.parse(existingSaved) : [];
-        const combined = [...new Set([...existing, ...savedIds])];
-        localStorage.setItem('savedScholarshipIds', JSON.stringify(combined));
-        
         toast({
-          title: "Matches Saved!",
-          description: "Your scholarship matches have been saved locally. Sign in to save them to your account."
+          title: "Sign in required",
+          description: "Please sign in to save scholarships to your dashboard.",
+          variant: "destructive"
         });
         return;
       }
 
-      const matchesToSave = results.map(scholarship => ({
-        user_id: user.id,
-        scholarship_name: scholarship.name,
-        provider: scholarship.provider,
-        amount: Number(scholarship.amount) || 0,
-        deadline: scholarship.deadline,
-        description: scholarship.description,
-        url: scholarship.url
+      // First, get the scholarship IDs from the database or create them
+      const savedCount = await Promise.all(results.map(async (scholarship) => {
+        try {
+          // Check if scholarship exists in database
+          let { data: existingScholarship } = await supabase
+            .from('scholarships')
+            .select('id')
+            .eq('name', scholarship.name)
+            .eq('provider', scholarship.provider)
+            .single();
+
+          let scholarshipId = existingScholarship?.id;
+
+          // If doesn't exist, create it
+          if (!scholarshipId) {
+            const { data: newScholarship, error: createError } = await supabase
+              .from('scholarships')
+              .insert({
+                name: scholarship.name,
+                provider: scholarship.provider,
+                amount: scholarship.amount,
+                deadline: scholarship.deadline,
+                description: scholarship.description,
+                application_url: scholarship.url,
+                category: 'merit'
+              })
+              .select('id')
+              .single();
+
+            if (createError) throw createError;
+            scholarshipId = newScholarship.id;
+          }
+
+          // Now save to saved_scholarships junction table
+          const { error: saveError } = await supabase
+            .from('saved_scholarships')
+            .insert({
+              user_id: user.id,
+              scholarship_id: scholarshipId
+            })
+            .select();
+
+          if (saveError && saveError.code !== '23505') { // Ignore duplicate errors
+            throw saveError;
+          }
+
+          return true;
+        } catch (err) {
+          console.error('Error saving scholarship:', scholarship.name, err);
+          return false;
+        }
       }));
 
-      const { error } = await supabase
-        .from('saved_scholarships')
-        .upsert(matchesToSave, {
-          onConflict: 'user_id,scholarship_name',
-          ignoreDuplicates: false
-        });
-
-      if (error) throw error;
-
-      const savedIds = results.map(s => `${s.name}-${s.provider}`);
-      const existingSaved = localStorage.getItem('savedScholarshipIds');
-      const existing = existingSaved ? JSON.parse(existingSaved) : [];
-      const combined = [...new Set([...existing, ...savedIds])];
-      localStorage.setItem('savedScholarshipIds', JSON.stringify(combined));
+      const successCount = savedCount.filter(Boolean).length;
 
       toast({
         title: "Success!",
-        description: `${results.length} scholarships saved to your dashboard!`
+        description: `${successCount} scholarship(s) saved to your dashboard!`
       });
 
     } catch (error) {
       console.error('Error saving matches:', error);
       toast({
         title: "Error",
-        description: "Failed to save matches. Please try again.",
+        description: "Failed to save some scholarships. Please try again.",
         variant: "destructive"
       });
     }
   };
 
   const getMockResults = () => {
-    const baseResults = [
-      { name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2025-03-15", description: "For high-achieving students with strong academic records", url: "https://example.com/merit-scholarship", requirements: ["3.5+ GPA", "Leadership experience", "Community service"] },
-      { name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2025-04-01", description: "Supporting students pursuing STEM fields", url: "https://example.com/stem-award", requirements: ["STEM major", "Research experience", "Innovation project"] },
-      { name: "Community Leadership Grant", amount: 7500, provider: "Community Foundation", match: 82, deadline: "2025-02-28", description: "For students with demonstrated community involvement", url: "https://example.com/community-grant", requirements: ["100+ volunteer hours", "Leadership role", "Community impact"] },
-      { name: "First Generation College Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2025-05-01", description: "Supporting first-generation college students", url: "https://example.com/first-gen", requirements: ["First-generation status", "Financial need", "Academic potential"] },
-      { name: "Diversity & Inclusion Scholarship", amount: 8000, provider: "Diversity Institute", match: 85, deadline: "2025-03-30", description: "Promoting diversity in higher education", url: "https://example.com/diversity", requirements: ["Underrepresented background", "Diversity advocacy", "Academic merit"] }
+    return [
+      { name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2026-03-15", description: "For high-achieving students", url: "https://example.com/merit", requirements: ["3.5+ GPA", "Leadership"] },
+      { name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2026-04-01", description: "Supporting STEM students", url: "https://example.com/stem", requirements: ["STEM major", "Research experience"] },
+      { name: "Community Leadership Grant", amount: 7500, provider: "Community Foundation", match: 82, deadline: "2026-02-28", description: "For community involvement", url: "https://example.com/community", requirements: ["100+ volunteer hours"] },
+      { name: "First Generation Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2026-05-01", description: "Supporting first-gen students", url: "https://example.com/first-gen", requirements: ["First-generation status"] },
+      { name: "Diversity & Inclusion", amount: 8000, provider: "Diversity Institute", match: 85, deadline: "2026-03-30", description: "Promoting diversity", url: "https://example.com/diversity", requirements: ["Underrepresented background"] },
+      { name: "Academic Excellence Award", amount: 6000, provider: "Scholars Foundation", match: 80, deadline: "2026-04-15", description: "For top students", url: "https://example.com/academic", requirements: ["3.7+ GPA"] },
+      { name: "Future Leaders Program", amount: 9000, provider: "Leadership Institute", match: 78, deadline: "2026-05-15", description: "Leadership development", url: "https://example.com/leaders", requirements: ["Leadership roles"] },
+      { name: "Innovation Challenge", amount: 12000, provider: "Innovation Fund", match: 75, deadline: "2026-06-01", description: "For innovative thinkers", url: "https://example.com/innovation", requirements: ["Project portfolio"] }
     ];
-    
-    return baseResults.filter(s => {
-      if (s.name.includes("First Generation") && !formData.firstGeneration) return false;
-      if (s.name.includes("STEM") && !formData.major.toLowerCase().includes('engineering') && !formData.major.toLowerCase().includes('science') && !formData.major.toLowerCase().includes('math')) return false;
-      return true;
-    }).map(s => ({ 
-      ...s, 
-      match: Math.max(75, s.match - Math.random() * 10) 
-    }));
   };
 
   const stats = [
-    { number: 50000, label: "Scholarships in Database", suffix: "+", color: "text-gray-900" },
+    { number: 50000, label: "Scholarships", suffix: "+", color: "text-gray-900" },
     { number: 98, label: "Match Accuracy", suffix: "%", color: "text-gray-900" },
-    { number: 15, label: "Million in Aid Found", prefix: "$", suffix: "M", color: "text-gray-900" },
-    { number: 45, label: "Seconds to Results", suffix: "s", color: "text-gray-900" }
+    { number: 15, label: "Million in Aid", prefix: "$", suffix: "M", color: "text-gray-900" },
+    { number: 45, label: "Seconds", suffix: "s", color: "text-gray-900" }
   ];
 
   const ethnicityOptions = ["African American/Black", "Asian/Pacific Islander", "Hispanic/Latino", "Native American", "White/Caucasian", "Middle Eastern", "Mixed/Other", "Prefer not to say"];
@@ -176,21 +467,21 @@ export const AutoScholarshipFinderPage = () => {
   return (
     <div className="min-h-screen bg-blue-50 relative overflow-hidden">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
-        <motion.div className="text-center mb-16 pt-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+        <motion.div className="text-center mb-16 pt-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
           <Badge className="mb-8 bg-blue-900 text-white border-0 px-8 py-3 text-base font-medium">
             <Brain className="w-5 h-5 mr-2" />
             AI-Powered Matching
           </Badge>
-          <h1 className="text-7xl md:text-8xl font-black mb-6 leading-[1.3] overflow-visible">
+          <h1 className="text-7xl md:text-8xl font-black mb-6">
             <span className="block text-gray-900 mb-4">AI Scholarship</span>
             <span className="block text-gray-900">Finder</span>
           </h1>
-          <p className="text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed">Get personalized scholarship recommendations using advanced AI and real-time web search</p>
+          <p className="text-2xl text-gray-700 max-w-4xl mx-auto">Get personalized recommendations using AI and database matching</p>
         </motion.div>
 
-        <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } }}>
+        <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
           {stats.map((stat, index) => (
-            <motion.div key={index} variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }} whileHover={{ scale: 1.05 }} className="text-center bg-white backdrop-blur-sm rounded-3xl p-6 shadow-lg border border-gray-200 hover:border-blue-400 transition-all duration-300">
+            <motion.div key={index} whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200">
               <div className={`text-4xl font-black ${stat.color} mb-3`}>
                 <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
               </div>
@@ -200,24 +491,24 @@ export const AutoScholarshipFinderPage = () => {
         </motion.div>
 
         <div className="mb-12">
-          <div className="flex items-center justify-center space-x-2 md:space-x-4 overflow-x-auto pb-4">
+          <div className="flex items-center justify-center space-x-2 md:space-x-4">
             {[1, 2, 3, 4, 5, 6, 7].map((stepNumber) => (
-              <div key={stepNumber} className="flex items-center flex-shrink-0">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${step >= stepNumber ? 'bg-blue-900 text-white shadow-lg' : 'bg-white text-gray-500 border-2 border-gray-300'}`}>
+              <div key={stepNumber} className="flex items-center">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${step >= stepNumber ? 'bg-blue-900 text-white' : 'bg-white text-gray-500 border-2 border-gray-300'}`}>
                   {step > stepNumber ? <CheckCircle className="h-6 w-6" /> : stepNumber}
                 </div>
-                {stepNumber < 7 && <div className={`w-8 md:w-16 h-1 mx-1 md:mx-2 transition-all duration-300 ${step > stepNumber ? 'bg-blue-900' : 'bg-gray-300'}`} />}
+                {stepNumber < 7 && <div className={`w-8 h-1 ${step > stepNumber ? 'bg-blue-900' : 'bg-gray-300'}`} />}
               </div>
             ))}
           </div>
-          <div className="flex justify-center mt-6">
-            <span className="text-base md:text-lg text-gray-700 font-medium">
-              Step {step} of 7: {step === 1 ? 'Academic Information' : step === 2 ? 'Personal Background' : step === 3 ? 'Financial Information' : step === 4 ? 'Activities & Leadership' : step === 5 ? 'Career Goals' : step === 6 ? 'Additional Information' : 'Your Matches'}
+          <div className="text-center mt-6">
+            <span className="text-lg text-gray-700 font-medium">
+              Step {step} of 7: {step === 1 ? 'Academic' : step === 2 ? 'Personal' : step === 3 ? 'Financial' : step === 4 ? 'Activities' : step === 5 ? 'Career Goals' : step === 6 ? 'Additional' : 'Your Matches'}
             </span>
           </div>
         </div>
 
-        <Card className="bg-white backdrop-blur-sm border border-gray-200 shadow-lg">
+        <Card className="bg-white border border-gray-200 shadow-lg">
           <CardContent className="p-8 md:p-12">
             {step === 1 && (
               <div className="space-y-8">
@@ -489,81 +780,49 @@ export const AutoScholarshipFinderPage = () => {
             {step === 7 && (
               <div className="space-y-8">
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Your AI-Matched Scholarships</h2>
-                  <p className="text-gray-700 text-lg">Personalized recommendations based on your profile</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Your Matches</h2>
+                  <p className="text-gray-700 text-lg">Found {results.length} scholarships for you</p>
                 </div>
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto mb-4"></div>
-                    <p className="text-gray-700 text-lg">AI is analyzing your profile and searching the web...</p>
-                    <p className="text-sm text-gray-600 mt-2">This may take up to 60 seconds</p>
+                    <p className="text-gray-700">AI is analyzing your profile...</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {results.length > 0 ? (
-                      results.map((scholarship, index) => (
-                        <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-                          <Card className="border-l-4 border-l-blue-900 bg-white backdrop-blur-sm border border-gray-200 shadow-lg hover:border-blue-400 transition-all">
-                            <CardContent className="p-6">
-                              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div className="flex-1">
-                                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{scholarship.name}</h3>
-                                  <p className="text-blue-900 font-medium mb-3 text-base">{scholarship.provider}</p>
-                                  <p className="text-gray-700 text-sm mb-4 leading-relaxed">{scholarship.description}</p>
-                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-4">
-                                    <span className="flex items-center">
-                                      <Calendar className="h-4 w-4 mr-1" />
-                                      Deadline: {scholarship.deadline}
-                                    </span>
-                                    <Badge className="bg-green-100 text-green-800 border-green-300">
-                                      {Math.round(scholarship.match)}% Match
-                                    </Badge>
-                                  </div>
-                                  {scholarship.requirements && (
-                                    <div className="mb-4">
-                                      <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {scholarship.requirements.map((req, reqIndex) => (
-                                          <Badge key={reqIndex} variant="outline" className="text-xs border-gray-300 text-gray-700">{req}</Badge>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="text-right md:ml-6">
-                                  <div className="text-3xl md:text-4xl font-black text-blue-900 mb-4">
-                                    ${scholarship.amount.toLocaleString()}
-                                  </div>
-                                  <Button size="sm" className="bg-blue-900 hover:bg-blue-800 text-white w-full" asChild>
-                                    <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply Now</a>
-                                  </Button>
+                    {results.map((scholarship, index) => (
+                      <motion.div key={index} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1 }}>
+                        <Card className="border-l-4 border-l-blue-900">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between gap-4">
+                              <div className="flex-1">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">{scholarship.name}</h3>
+                                <p className="text-blue-900 font-medium mb-3">{scholarship.provider}</p>
+                                <p className="text-gray-700 text-sm mb-4">{scholarship.description}</p>
+                                <div className="flex items-center gap-3 text-sm mb-4">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>Deadline: {scholarship.deadline}</span>
+                                  <Badge className="bg-green-100 text-green-800">{Math.round(scholarship.match)}% Match</Badge>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))
-                    ) : (
-                      <div className="text-center py-12">
-                        <p className="text-gray-700 text-lg mb-4">No scholarships found matching your profile.</p>
-                        <p className="text-gray-600">Try adjusting your criteria or browse our scholarship database.</p>
-                      </div>
-                    )}
+                              <div className="text-right">
+                                <div className="text-3xl font-black text-blue-900 mb-4">${scholarship.amount.toLocaleString()}</div>
+                                <Button size="sm" className="bg-blue-900" asChild>
+                                  <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply</a>
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
                     
                     {results.length > 0 && (
-                      <div className="text-center pt-8 space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                          <Button className="bg-pink-600 hover:bg-pink-500 text-white px-8 py-6 text-lg" onClick={saveMatches}>
-                            <Heart className="mr-2 h-5 w-5" />
-                            Save to Dashboard
-                          </Button>
-                          <Button variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white px-8 py-6 text-lg" asChild>
-                            <a href="/scholarships">
-                              <Search className="mr-2 h-5 w-5" />
-                              Find More Scholarships
-                            </a>
-                          </Button>
-                        </div>
+                      <div className="text-center pt-8">
+                        <Button className="bg-pink-600 hover:bg-pink-500 px-8 py-6 text-lg" onClick={saveMatches}>
+                          <Heart className="mr-2 h-5 w-5" />
+                          Save All to Dashboard
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -571,24 +830,19 @@ export const AutoScholarshipFinderPage = () => {
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
-              <Button variant="outline" onClick={handleBack} disabled={step === 1 || step === 7} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 px-8 py-6 text-lg">
-                Back
-              </Button>
+            <div className="flex justify-between gap-4 mt-8 pt-6 border-t">
+              <Button variant="outline" onClick={handleBack} disabled={step === 1 || step === 7}>Back</Button>
               {step < 6 ? (
-                <Button onClick={handleNext} className="bg-blue-900 hover:bg-blue-800 text-white px-8 py-6 text-lg">
-                  Next
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button onClick={handleNext} className="bg-blue-900">
+                  Next <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               ) : step === 6 ? (
-                <Button onClick={handleSubmit} className="bg-blue-900 hover:bg-blue-800 text-white px-8 py-6 text-lg" disabled={loading}>
+                <Button onClick={handleSubmit} className="bg-blue-900" disabled={loading}>
                   <Zap className="mr-2 h-5 w-5" />
-                  Find My Scholarships
+                  Find Scholarships
                 </Button>
               ) : (
-                <Button onClick={() => { setStep(1); setResults([]); setFormData({ gpa: '', satScore: '', actScore: '', classRank: '', major: '', academicHonors: [], ethnicity: '', gender: '', state: '', zipCode: '', citizenship: '', firstGeneration: false, familyIncome: '', needBasedAid: false, extracurriculars: '', leadership: '', communityService: '', workExperience: '', awards: '', talents: [], careerGoals: '', collegeType: '', studyAbroad: false, challenges: '', uniqueCircumstances: '', languages: [] }); }} variant="outline" className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 px-8 py-6 text-lg">
-                  Start Over
-                </Button>
+                <Button onClick={() => { setStep(1); setResults([]); }} variant="outline">Start Over</Button>
               )}
             </div>
           </CardContent>

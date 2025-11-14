@@ -67,7 +67,7 @@ export const DashboardPage = () => {
     try {
       // Fetch saved scholarships from the actual table structure
       const { data: scholarshipData, error: scholError } = await supabase
-        .from('saved_scholarships')
+        .from('scholarship_bookmarks_2025_10_07_02_17')
         .select(`
           id,
           scholarship_id,
@@ -662,4 +662,4 @@ export const DashboardPage = () => {
       </div>
     </div>
   );
-}
+};
