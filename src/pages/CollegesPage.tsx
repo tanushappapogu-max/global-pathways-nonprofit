@@ -11,30 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { CountUp } from '@/components/animations/CountUp';
 import { 
-  Search, 
-  MapPin, 
-  Users, 
-  DollarSign, 
-  GraduationCap, 
-  ExternalLink,
-  Filter,
-  Star,
-  BookOpen,
-  TrendingUp,
-  Calendar,
-  Award,
-  X,
-  School,
-  Check,
-  Plus,
-  Minus,
-  ArrowUpDown,
-  Heart,
-  ChevronDown,
-  ChevronUp,
-  Building2,
-  Target,
-  ArrowUp
+  Search, MapPin, Users, DollarSign, GraduationCap, ExternalLink, Filter, Star,
+  BookOpen, TrendingUp, Calendar, Award, X, School, Check, Plus, Minus,
+  ArrowUpDown, Heart, ChevronDown, ChevronUp, Building2, Target, ArrowUp
 } from 'lucide-react';
 
 interface College {
@@ -91,7 +70,6 @@ export const CollegesPage: React.FC = () => {
   const [showTopButton, setShowTopButton] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   const collegeTypes = [
     { value: 'ivy_league', label: 'Ivy League' },
@@ -99,9 +77,8 @@ export const CollegesPage: React.FC = () => {
     { value: 'state_school', label: 'State Universities' },
     { value: 'liberal_arts', label: 'Liberal Arts Colleges' },
     { value: 'technical', label: 'Technical Schools' },
-    { value: 'community', label: 'Community Colleges'}, 
+    { value: 'community', label: 'Community Colleges'},
     { value: 'private' , label: 'Private' }
-  
   ];
 
   const states = [
@@ -122,7 +99,7 @@ export const CollegesPage: React.FC = () => {
   useEffect(() => {
     applyFiltersAndSort();
   }, [colleges, searchTerm, selectedType, selectedState, maxAdmissionRate, minAdmissionRate, 
-      maxTuition, minTuition, testOptionalOnly, needBlindOnly, meetsFullNeedOnly, sortBy, sortDirection]);
+      maxTuition, minTuition, testOptionalOnly, needBlindOnly, meetsFullNeedOnly, sortBy, sortDirection, savedColleges]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -213,6 +190,14 @@ export const CollegesPage: React.FC = () => {
 
     // Sorting
     filtered.sort((a, b) => {
+      // ALWAYS put saved colleges at the top
+      const aIsSaved = savedColleges.includes(a.id);
+      const bIsSaved = savedColleges.includes(b.id);
+      
+      if (aIsSaved && !bIsSaved) return -1;
+      if (!aIsSaved && bIsSaved) return 1;
+      
+      // Then sort by selected criteria
       let aVal, bVal;
       
       switch (sortBy) {
@@ -345,25 +330,14 @@ export const CollegesPage: React.FC = () => {
                 <p className="text-blue-200">Add up to 4 colleges to compare side-by-side</p>
               </div>
               <div className="flex gap-3">
-                <Button
-  onClick={() => setComparisonList([])}
-  variant="outline"
-  className="border-white text-white hover:bg-blue-800"
->
-  Clear All
-</Button>
-
-{comparisonList.length >= 2 && (
-  <Button
-    className="bg-white text-blue-900 hover:bg-blue-50 font-bold"
-    onClick={() =>
-      navigate("/college-comparison", { state: { comparisonList } })
-    }
-  >
-    Compare Now →
-  </Button>
-)}
-
+                <Button onClick={() => setComparisonList([])} variant="outline" className="border-white text-white hover:bg-blue-800">
+                  Clear All
+                </Button>
+                {comparisonList.length >= 2 && (
+                  <Button className="bg-white text-blue-900 hover:bg-blue-50 font-bold" onClick={() => navigate("/college-comparison", { state: { comparisonList } })}>
+                    Compare Now →
+                  </Button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2 mt-4">
@@ -383,16 +357,15 @@ export const CollegesPage: React.FC = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           <AnimatePresence>
             {showTopButton && (
-               <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showTopButton ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-8 right-8 bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl z-50 flex items-center justify-center"
-          style={{ pointerEvents: showTopButton ? 'auto' : 'none' }}
-        >
-          <ArrowUp className="w-6 h-6" />
-        </motion.button>
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="fixed bottom-8 right-8 bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl z-50 flex items-center justify-center"
+              >
+                <ArrowUp className="w-6 h-6" />
+              </motion.button>
             )}
           </AnimatePresence>
 
@@ -507,6 +480,15 @@ export const CollegesPage: React.FC = () => {
           </div>
 
           <div className="lg:col-span-3">
+            {savedColleges.length > 0 && (
+              <div className="mb-6 p-4 bg-pink-50 border-2 border-pink-300 rounded-lg">
+                <p className="text-pink-900 font-semibold flex items-center gap-2">
+                  <Heart className="h-5 w-5 fill-pink-500 text-pink-500" />
+                  Saved colleges appear at the top of the list
+                </p>
+              </div>
+            )}
+
             {filteredColleges.length > 0 ? (
               <div className="space-y-4">
                 {filteredColleges.map((college, index) => {
@@ -517,7 +499,11 @@ export const CollegesPage: React.FC = () => {
 
                   return (
                     <motion.div key={college.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
-                      <Card className={`bg-white border-2 shadow-lg hover:shadow-xl transition-all duration-300 ${isInComparison ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'}`}>
+                      <Card className={`bg-white border-2 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                        isSaved ? 'border-pink-500 ring-2 ring-pink-200' : 
+                        isInComparison ? 'border-blue-500 ring-2 ring-blue-200' : 
+                        'border-gray-200 hover:border-blue-300'
+                      }`}>
                         <CardHeader className="pb-4">
                           <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">
@@ -763,40 +749,6 @@ export const CollegesPage: React.FC = () => {
             )}
           </div>
         </div>
-
-        {savedColleges.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-12 bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Heart className="h-6 w-6 text-pink-500 fill-pink-500" />
-                Saved Colleges ({savedColleges.length})
-              </h3>
-              <Button onClick={() => {
-                setSavedColleges([]);
-                localStorage.removeItem('savedColleges');
-              }} variant="outline" size="sm" className="border-gray-300 text-gray-700">
-                Clear Saved
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {savedColleges.map(id => {
-                const college = colleges.find(c => c.id === id);
-                return college ? (
-                  <div key={id} className="p-4 bg-pink-50 rounded-lg border border-pink-200">
-                    <div className="font-semibold text-gray-900 mb-1">{college.name}</div>
-                    <div className="text-sm text-gray-600 mb-2">{college.location}</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-pink-600 font-medium">
-                        {college.admission_rate ? `${college.admission_rate}% acceptance` : 'N/A'}
-                      </span>
-                      <X className="h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-900" onClick={() => toggleSaveCollege(id)} />
-                    </div>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </motion.div>
-        )}
       </div>
     </div>
   );

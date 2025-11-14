@@ -1,53 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CountUp } from '@/components/animations/CountUp';
 import { 
-  GraduationCap, 
-  BookOpen, 
-  Calculator, 
-  Search, 
-  TrendingUp,
-  Award,
-  Clock,
-  Target,
-  CheckCircle,
-  Calendar,
-  Zap,
-  DollarSign,
-  Users,
-  FileText,
-  ArrowRight,
-  Bookmark,
-  Bell,
-  X,
-  Plus,
-  Check,
-  AlertCircle,
-  Star,
-  TrendingDown
+  GraduationCap, Calculator, Search, Award, Clock, Target,
+  CheckCircle, Calendar, Zap, DollarSign, Users, FileText, ArrowRight,
+  Bell, X, Check, Star, Heart, School, ExternalLink, MapPin
 } from 'lucide-react';
-
-interface Task {
-  id: number;
-  title: string;
-  completed: boolean;
-  link: string;
-}
 
 export const DashboardPage = () => {
   const { user } = useAuth();
-  const [savedScholarships, setSavedScholarships] = useState(0);
+  const [savedScholarships, setSavedScholarships] = useState([]);
+  const [savedColleges, setSavedColleges] = useState([]);
   const [profileCompletion, setProfileCompletion] = useState(25);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [progressTasks, setProgressTasks] = useState<Task[]>([
+  const [progressTasks, setProgressTasks] = useState([
     { id: 1, title: "Complete your profile", completed: false, link: "/dashboard" },
     { id: 2, title: "Submit FAFSA application", completed: false, link: "/fafsa" },
     { id: 3, title: "Save 5 scholarships", completed: false, link: "/scholarships" },
@@ -55,18 +28,11 @@ export const DashboardPage = () => {
     { id: 5, title: "Calculate education costs", completed: false, link: "/cost-calculator" }
   ]);
 
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState([
+  const [upcomingDeadlines] = useState([
     { id: 1, title: "FAFSA Priority Deadline", date: "2025-03-01", daysLeft: 90, priority: "high" },
     { id: 2, title: "Common App Deadline", date: "2025-01-15", daysLeft: 45, priority: "high" },
     { id: 3, title: "Merit Scholarship", date: "2025-02-01", daysLeft: 62, priority: "medium" }
   ]);
-
-  const [quickStats, setQuickStats] = useState({
-    scholarshipsFound: 0,
-    totalAidAvailable: 125,
-    applicationsStarted: 0,
-    collegesSaved: 0
-  });
 
   useEffect(() => {
     fetchUserData();
@@ -80,12 +46,12 @@ export const DashboardPage = () => {
     }
   };
 
-  const saveTasks = (tasks: Task[]) => {
+  const saveTasks = (tasks) => {
     localStorage.setItem('dashboardTasks', JSON.stringify(tasks));
     setProgressTasks(tasks);
   };
 
-  const toggleTask = (taskId: number) => {
+  const toggleTask = (taskId) => {
     const updated = progressTasks.map(task => 
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
@@ -93,26 +59,92 @@ export const DashboardPage = () => {
   };
 
   const fetchUserData = async () => {
-    if (!user) return;
+    if (!user) {
+      loadLocalData();
+      return;
+    }
     
     try {
-      const { count } = await supabase
+      // Fetch saved scholarships from the actual table structure
+      const { data: scholarshipData, error: scholError } = await supabase
         .from('saved_scholarships')
-        .select('*', { count: 'exact', head: true })
+        .select(`
+          id,
+          scholarship_id,
+          scholarships (
+            id,
+            name,
+            provider,
+            amount,
+            deadline,
+            description,
+            application_url
+          )
+        `)
         .eq('user_id', user.id);
       
-      setSavedScholarships(count || 0);
+      if (!scholError && scholarshipData) {
+        // Transform the data to match what we need
+        const transformedScholarships = scholarshipData
+          .filter(item => item.scholarships) // Only include items that have scholarship data
+          .map(item => ({
+            id: item.id,
+            scholarship_id: item.scholarship_id,
+            scholarship_name: item.scholarships.name,
+            provider: item.scholarships.provider,
+            amount: item.scholarships.amount,
+            deadline: item.scholarships.deadline,
+            description: item.scholarships.description,
+            url: item.scholarships.application_url
+          }));
+        
+        setSavedScholarships(transformedScholarships);
+        console.log('Loaded scholarships:', transformedScholarships);
+      } else if (scholError) {
+        console.error('Error fetching scholarships:', scholError);
+      }
+
+      // Load saved colleges from localStorage
+      const savedCollegeIds = localStorage.getItem('savedColleges');
+      if (savedCollegeIds) {
+        const collegeIds = JSON.parse(savedCollegeIds);
+        if (collegeIds.length > 0) {
+          const { data: collegeData, error: collegeError } = await supabase
+            .from('colleges_database_2025_10_06_01_15')
+            .select('*')
+            .in('id', collegeIds);
+          
+          if (!collegeError && collegeData) {
+            setSavedColleges(collegeData);
+          }
+        }
+      }
       
       const completionScore = calculateProfileCompletion();
       setProfileCompletion(completionScore);
       
       const updatedTasks = [...progressTasks];
       if (completionScore >= 75) updatedTasks[0].completed = true;
-      if ((count || 0) >= 5) updatedTasks[2].completed = true;
+      if (scholarshipData && scholarshipData.length >= 5) updatedTasks[2].completed = true;
       saveTasks(updatedTasks);
       
     } catch (error) {
       console.error('Error fetching user data:', error);
+      loadLocalData();
+    }
+  };
+
+  const loadLocalData = () => {
+    const savedScholarshipIds = localStorage.getItem('savedScholarshipIds');
+    if (savedScholarshipIds) {
+      const ids = JSON.parse(savedScholarshipIds);
+      console.log(`${ids.length} scholarships saved locally`);
+    }
+
+    const savedCollegeIds = localStorage.getItem('savedColleges');
+    if (savedCollegeIds) {
+      const ids = JSON.parse(savedCollegeIds);
+      console.log(`${ids.length} colleges saved locally`);
     }
   };
 
@@ -125,6 +157,38 @@ export const DashboardPage = () => {
     if (user?.user_metadata?.graduation_year) score += 15;
     return score;
   };
+
+  const removeScholarship = async (savedScholarshipId) => {
+    try {
+      if (user) {
+        const { error } = await supabase
+          .from('saved_scholarships')
+          .delete()
+          .eq('id', savedScholarshipId)
+          .eq('user_id', user.id);
+          
+        if (error) {
+          console.error('Error removing scholarship:', error);
+          return;
+        }
+      }
+      setSavedScholarships(prev => prev.filter(s => s.id !== savedScholarshipId));
+    } catch (error) {
+      console.error('Error removing scholarship:', error);
+    }
+  };
+
+  const removeCollege = (collegeId) => {
+    const saved = localStorage.getItem('savedColleges');
+    if (saved) {
+      const ids = JSON.parse(saved);
+      const updated = ids.filter((id) => id !== collegeId);
+      localStorage.setItem('savedColleges', JSON.stringify(updated));
+      setSavedColleges(prev => prev.filter(c => c.id !== collegeId));
+    }
+  };
+
+  const totalScholarshipValue = savedScholarships.reduce((sum, s) => sum + (s.amount || 0), 0);
 
   const quickActions = [
     {
@@ -230,7 +294,7 @@ export const DashboardPage = () => {
               </AnimatePresence>
             </div>
           </div>
-        {profileCompletion < 75 && (
+          {profileCompletion < 75 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -266,9 +330,9 @@ export const DashboardPage = () => {
           }}
         >
           {[
-            { icon: Award, label: "Scholarships Saved", value: savedScholarships, color: "blue", bgColor: "bg-blue-100" },
-            { icon: DollarSign, label: "Potential Aid", value: quickStats.totalAidAvailable, prefix: "$", suffix: "K", color: "green", bgColor: "bg-green-100" },
-            { icon: FileText, label: "Applications", value: quickStats.applicationsStarted, color: "purple", bgColor: "bg-purple-100" },
+            { icon: Award, label: "Scholarships Saved", value: savedScholarships.length, color: "blue", bgColor: "bg-blue-100" },
+            { icon: DollarSign, label: "Potential Aid", value: Math.round(totalScholarshipValue / 1000), prefix: "$", suffix: "K", color: "green", bgColor: "bg-green-100" },
+            { icon: School, label: "Colleges Saved", value: savedColleges.length, color: "purple", bgColor: "bg-purple-100" },
             { icon: Target, label: "Profile Complete", value: profileCompletion, suffix: "%", color: "orange", bgColor: "bg-orange-100" }
           ].map((stat, index) => (
             <motion.div
@@ -284,7 +348,7 @@ export const DashboardPage = () => {
                   <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center mb-4`}>
                     <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
                   </div>
-                  <div className={`text-3xl font-black text-gray-900 mb-1`}>
+                  <div className="text-3xl font-black text-gray-900 mb-1">
                     <CountUp end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
                   </div>
                   <p className="text-gray-600 text-sm">{stat.label}</p>
@@ -296,6 +360,131 @@ export const DashboardPage = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            {/* Saved Scholarships Section */}
+            {savedScholarships.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Heart className="h-6 w-6 text-pink-500 fill-pink-500" />
+                    Saved Scholarships ({savedScholarships.length})
+                  </h2>
+                  <Link to="/scholarships">
+                    <Button variant="outline" size="sm" className="border-gray-300 text-gray-900">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+                <div className="space-y-4">
+                  {savedScholarships.slice(0, 5).map((scholarship, index) => (
+                    <motion.div
+                      key={scholarship.id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="bg-white border-gray-200 hover:border-pink-400 transition-all">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 mb-1">{scholarship.scholarship_name}</h3>
+                              <p className="text-sm text-gray-600 mb-2">{scholarship.provider}</p>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="font-bold text-blue-900">
+                                  ${scholarship.amount?.toLocaleString() || 'Varies'}
+                                </span>
+                                <span className="text-gray-600 flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {scholarship.deadline}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              {scholarship.url && (
+                                <Button size="sm" variant="outline" asChild className="border-gray-300">
+                                  <a href={scholarship.url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              )}
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => removeScholarship(scholarship.id)}
+                                className="text-gray-500 hover:text-red-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Saved Colleges Section */}
+            {savedColleges.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <School className="h-6 w-6 text-blue-600" />
+                    Saved Colleges ({savedColleges.length})
+                  </h2>
+                  <Link to="/colleges">
+                    <Button variant="outline" size="sm" className="border-gray-300 text-gray-900">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {savedColleges.slice(0, 4).map((college, index) => (
+                    <motion.div
+                      key={college.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="bg-white border-gray-200 hover:border-blue-400 transition-all">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 mb-1 text-sm">{college.name}</h3>
+                              <p className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {college.location}
+                              </p>
+                              <div className="flex items-center gap-2 text-xs">
+                                {college.admission_rate && (
+                                  <Badge variant="outline" className="border-blue-300 text-blue-900">
+                                    {college.admission_rate}% acceptance
+                                  </Badge>
+                                )}
+                                {college.tuition_out_state && (
+                                  <span className="text-gray-600">
+                                    ${(college.tuition_out_state / 1000).toFixed(0)}K
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => removeCollege(college.id)}
+                              className="text-gray-500 hover:text-red-600 shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
               <div className="grid md:grid-cols-2 gap-4">
@@ -450,7 +639,7 @@ export const DashboardPage = () => {
                   {[
                     { title: "FAFSA Guide", icon: FileText, link: "/fafsa", color: "text-blue-600" },
                     { title: "Success Stories", icon: Users, link: "/success-stories", color: "text-green-600" },
-                    { title: "Blog & Tips", icon: BookOpen, link: "/blog", color: "text-purple-600" }
+                    { title: "Blog & Tips", icon: CheckCircle, link: "/blog", color: "text-purple-600" }
                   ].map((resource, index) => (
                     <Link key={index} to={resource.link}>
                       <motion.div 
@@ -473,4 +662,4 @@ export const DashboardPage = () => {
       </div>
     </div>
   );
-};
+}

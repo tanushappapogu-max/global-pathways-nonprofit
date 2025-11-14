@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Sparkles, Zap, ArrowRight, CheckCircle, Brain, Calendar, Search, Heart
+  Zap, ArrowRight, CheckCircle, Brain, Calendar, Search, Heart
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 
@@ -89,7 +89,6 @@ export const AutoScholarshipFinderPage = () => {
   const saveMatches = async () => {
     try {
       if (!user) {
-        // Save to localStorage for non-logged-in users
         const savedIds = results.map(s => `${s.name}-${s.provider}`);
         const existingSaved = localStorage.getItem('savedScholarshipIds');
         const existing = existingSaved ? JSON.parse(existingSaved) : [];
@@ -122,7 +121,6 @@ export const AutoScholarshipFinderPage = () => {
 
       if (error) throw error;
 
-      // Also save to localStorage
       const savedIds = results.map(s => `${s.name}-${s.provider}`);
       const existingSaved = localStorage.getItem('savedScholarshipIds');
       const existing = existingSaved ? JSON.parse(existingSaved) : [];
@@ -502,69 +500,79 @@ export const AutoScholarshipFinderPage = () => {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {results.map((scholarship, index) => (
-                      <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-                        <Card className="border-l-4 border-l-blue-900 bg-white backdrop-blur-sm border border-gray-200 shadow-lg hover:border-blue-400 transition-all">
-                          <CardContent className="p-6">
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{scholarship.name}</h3>
-                                <p className="text-blue-900 font-medium mb-3 text-base">{scholarship.provider}</p>
-                                <p className="text-gray-700 text-sm mb-4 leading-relaxed">{scholarship.description}</p>
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-4">
-                                  <span className="flex items-center">
-                                    <Calendar className="h-4 w-4 mr-1" />
-                                    Deadline: {scholarship.deadline}
-                                  </span>
-                                  <Badge className="bg-green-100 text-green-800 border-green-300">
-                                    {Math.round(scholarship.match)}% Match
-                                  </Badge>
-                                </div>
-                                {scholarship.requirements && (
-                                  <div className="mb-4">
-                                    <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                      {scholarship.requirements.map((req, reqIndex) => (
-                                        <Badge key={reqIndex} variant="outline" className="text-xs border-gray-300 text-gray-700">{req}</Badge>
-                                      ))}
-                                    </div>
+                    {results.length > 0 ? (
+                      results.map((scholarship, index) => (
+                        <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+                          <Card className="border-l-4 border-l-blue-900 bg-white backdrop-blur-sm border border-gray-200 shadow-lg hover:border-blue-400 transition-all">
+                            <CardContent className="p-6">
+                              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{scholarship.name}</h3>
+                                  <p className="text-blue-900 font-medium mb-3 text-base">{scholarship.provider}</p>
+                                  <p className="text-gray-700 text-sm mb-4 leading-relaxed">{scholarship.description}</p>
+                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-4">
+                                    <span className="flex items-center">
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      Deadline: {scholarship.deadline}
+                                    </span>
+                                    <Badge className="bg-green-100 text-green-800 border-green-300">
+                                      {Math.round(scholarship.match)}% Match
+                                    </Badge>
                                   </div>
-                                )}
-                              </div>
-                              <div className="text-right md:ml-6">
-                                <div className="text-3xl md:text-4xl font-black text-blue-900 mb-4">
-                                  ${scholarship.amount.toLocaleString()}
+                                  {scholarship.requirements && (
+                                    <div className="mb-4">
+                                      <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {scholarship.requirements.map((req, reqIndex) => (
+                                          <Badge key={reqIndex} variant="outline" className="text-xs border-gray-300 text-gray-700">{req}</Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <Button size="sm" className="bg-blue-900 hover:bg-blue-800 text-white w-full" asChild>
-                                  <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply Now</a>
-                                </Button>
+                                <div className="text-right md:ml-6">
+                                  <div className="text-3xl md:text-4xl font-black text-blue-900 mb-4">
+                                    ${scholarship.amount.toLocaleString()}
+                                  </div>
+                                  <Button size="sm" className="bg-blue-900 hover:bg-blue-800 text-white w-full" asChild>
+                                    <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply Now</a>
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                    <div className="text-center pt-8 space-y-4">
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button className="bg-pink-600 hover:bg-pink-500 text-white px-8 py-6 text-lg" onClick={saveMatches}>
-                          <Heart className="mr-2 h-5 w-5" />
-                          Save to Dashboard
-                        </Button>
-                        <Button variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white px-8 py-6 text-lg" asChild>
-                          <a href="/scholarships">
-                            <Search className="mr-2 h-5 w-5" />
-                            Find More Scholarships
-                          </a>
-                        </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-gray-700 text-lg mb-4">No scholarships found matching your profile.</p>
+                        <p className="text-gray-600">Try adjusting your criteria or browse our scholarship database.</p>
                       </div>
-                    </div>
+                    )}
+                    
+                    {results.length > 0 && (
+                      <div className="text-center pt-8 space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                          <Button className="bg-pink-600 hover:bg-pink-500 text-white px-8 py-6 text-lg" onClick={saveMatches}>
+                            <Heart className="mr-2 h-5 w-5" />
+                            Save to Dashboard
+                          </Button>
+                          <Button variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white px-8 py-6 text-lg" asChild>
+                            <a href="/scholarships">
+                              <Search className="mr-2 h-5 w-5" />
+                              Find More Scholarships
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
             <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
-              <Button variant="outline" onClick={handleBack} disabled={step === 1} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 px-8 py-6 text-lg">
+              <Button variant="outline" onClick={handleBack} disabled={step === 1 || step === 7} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 px-8 py-6 text-lg">
                 Back
               </Button>
               {step < 6 ? (
