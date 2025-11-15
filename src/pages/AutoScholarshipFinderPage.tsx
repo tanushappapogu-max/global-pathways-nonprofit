@@ -369,9 +369,13 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
         return;
       }
 
-      // First, get the scholarship IDs from the database or create them
+      console.log('💾 Starting to save scholarships...');
+
+      // Save each scholarship
       const savedCount = await Promise.all(results.map(async (scholarship) => {
         try {
+          console.log(`📝 Processing: ${scholarship.name}`);
+          
           // Check if scholarship exists in database
           let { data: existingScholarship } = await supabase
             .from('scholarships')
@@ -384,6 +388,7 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
 
           // If doesn't exist, create it
           if (!scholarshipId) {
+            console.log(`➕ Creating new scholarship in database: ${scholarship.name}`);
             const { data: newScholarship, error: createError } = await supabase
               .from('scholarships')
               .insert({
@@ -398,31 +403,44 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
               .select('id')
               .single();
 
-            if (createError) throw createError;
+            if (createError) {
+              console.error('❌ Error creating scholarship:', createError);
+              throw createError;
+            }
             scholarshipId = newScholarship.id;
+            console.log(`✅ Created scholarship with ID: ${scholarshipId}`);
+          } else {
+            console.log(`✅ Found existing scholarship with ID: ${scholarshipId}`);
           }
 
-          // Now save to saved_scholarships junction table
+          // Now save to scholarship_bookmarks_2025_10_07_02_17
+          console.log(`🔖 Saving bookmark for scholarship ID: ${scholarshipId}`);
           const { error: saveError } = await supabase
-            .from('saved_scholarships')
+            .from('scholarship_bookmarks_2025_10_07_02_17')
             .insert({
               user_id: user.id,
               scholarship_id: scholarshipId
-            })
-            .select();
+            });
 
-          if (saveError && saveError.code !== '23505') { // Ignore duplicate errors
+          if (saveError) {
+            if (saveError.code === '23505') {
+              console.log(`ℹ️ Scholarship already saved: ${scholarship.name}`);
+              return true; // Already saved, not an error
+            }
+            console.error('❌ Error saving bookmark:', saveError);
             throw saveError;
           }
 
+          console.log(`✅ Successfully saved: ${scholarship.name}`);
           return true;
         } catch (err) {
-          console.error('Error saving scholarship:', scholarship.name, err);
+          console.error(`❌ Error saving scholarship: ${scholarship.name}`, err);
           return false;
         }
       }));
 
       const successCount = savedCount.filter(Boolean).length;
+      console.log(`✅ Total saved: ${successCount}/${results.length}`);
 
       toast({
         title: "Success!",
@@ -430,7 +448,7 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
       });
 
     } catch (error) {
-      console.error('Error saving matches:', error);
+      console.error('❌ Error saving matches:', error);
       toast({
         title: "Error",
         description: "Failed to save some scholarships. Please try again.",
