@@ -16,8 +16,8 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
-  const [savedScholarships, setSavedScholarships] = useState([]);
-  const [savedColleges, setSavedColleges] = useState([]);
+  const [savedScholarships, setSavedScholarships] = useState<any[]>([]);
+  const [savedColleges, setSavedColleges] = useState<any[]>([]);
   const [profileCompletion, setProfileCompletion] = useState(25);
   const [showNotifications, setShowNotifications] = useState(false);
   const [progressTasks, setProgressTasks] = useState([
@@ -46,12 +46,12 @@ export const DashboardPage = () => {
     }
   };
 
-  const saveTasks = (tasks) => {
+  const saveTasks = (tasks: any[]) => {
     localStorage.setItem('dashboardTasks', JSON.stringify(tasks));
     setProgressTasks(tasks);
   };
 
-  const toggleTask = (taskId) => {
+  const toggleTask = (taskId: number) => {
     const updated = progressTasks.map(task => 
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
@@ -59,49 +59,13 @@ export const DashboardPage = () => {
   };
 
   const fetchUserData = async () => {
-    if (!user) {
-      loadLocalData();
-      return;
-    }
-    
     try {
-      // Fetch saved scholarships from the actual table structure
-      const { data: scholarshipData, error: scholError } = await supabase
-        .from('scholarship_bookmarks_2025_10_07_02_17')
-        .select(`
-          id,
-          scholarship_id,
-          scholarships (
-            id,
-            name,
-            provider,
-            amount,
-            deadline,
-            description,
-            application_url
-          )
-        `)
-        .eq('user_id', user.id);
-      
-      if (!scholError && scholarshipData) {
-        // Transform the data to match what we need
-        const transformedScholarships = scholarshipData
-          .filter(item => item.scholarships) // Only include items that have scholarship data
-          .map(item => ({
-            id: item.id,
-            scholarship_id: item.scholarship_id,
-            scholarship_name: item.scholarships.name,
-            provider: item.scholarships.provider,
-            amount: item.scholarships.amount,
-            deadline: item.scholarships.deadline,
-            description: item.scholarships.description,
-            url: item.scholarships.application_url
-          }));
-        
-        setSavedScholarships(transformedScholarships);
-        console.log('Loaded scholarships:', transformedScholarships);
-      } else if (scholError) {
-        console.error('Error fetching scholarships:', scholError);
+      // Load scholarships from localStorage
+      const savedScholarshipsData = localStorage.getItem('savedScholarships');
+      if (savedScholarshipsData) {
+        const scholarships = JSON.parse(savedScholarshipsData);
+        setSavedScholarships(scholarships);
+        console.log('✅ Loaded scholarships from localStorage:', scholarships.length);
       }
 
       // Load saved colleges from localStorage
@@ -125,26 +89,15 @@ export const DashboardPage = () => {
       
       const updatedTasks = [...progressTasks];
       if (completionScore >= 75) updatedTasks[0].completed = true;
-      if (scholarshipData && scholarshipData.length >= 5) updatedTasks[2].completed = true;
+      
+      if (savedScholarshipsData) {
+        const scholarships = JSON.parse(savedScholarshipsData);
+        if (scholarships.length >= 5) updatedTasks[2].completed = true;
+      }
       saveTasks(updatedTasks);
       
     } catch (error) {
       console.error('Error fetching user data:', error);
-      loadLocalData();
-    }
-  };
-
-  const loadLocalData = () => {
-    const savedScholarshipIds = localStorage.getItem('savedScholarshipIds');
-    if (savedScholarshipIds) {
-      const ids = JSON.parse(savedScholarshipIds);
-      console.log(`${ids.length} scholarships saved locally`);
-    }
-
-    const savedCollegeIds = localStorage.getItem('savedColleges');
-    if (savedCollegeIds) {
-      const ids = JSON.parse(savedCollegeIds);
-      console.log(`${ids.length} colleges saved locally`);
     }
   };
 
@@ -158,37 +111,27 @@ export const DashboardPage = () => {
     return score;
   };
 
-  const removeScholarship = async (savedScholarshipId) => {
-    try {
-      if (user) {
-        const { error } = await supabase
-          .from('saved_scholarships')
-          .delete()
-          .eq('id', savedScholarshipId)
-          .eq('user_id', user.id);
-          
-        if (error) {
-          console.error('Error removing scholarship:', error);
-          return;
-        }
-      }
-      setSavedScholarships(prev => prev.filter(s => s.id !== savedScholarshipId));
-    } catch (error) {
-      console.error('Error removing scholarship:', error);
+  const removeScholarship = (scholarshipId: string | number) => {
+    const saved = localStorage.getItem('savedScholarships');
+    if (saved) {
+      const scholarships = JSON.parse(saved);
+      const updated = scholarships.filter((s: any) => s.id !== scholarshipId);
+      localStorage.setItem('savedScholarships', JSON.stringify(updated));
+      setSavedScholarships(updated);
     }
   };
 
-  const removeCollege = (collegeId) => {
+  const removeCollege = (collegeId: number) => {
     const saved = localStorage.getItem('savedColleges');
     if (saved) {
       const ids = JSON.parse(saved);
-      const updated = ids.filter((id) => id !== collegeId);
+      const updated = ids.filter((id: number) => id !== collegeId);
       localStorage.setItem('savedColleges', JSON.stringify(updated));
-      setSavedColleges(prev => prev.filter(c => c.id !== collegeId));
+      setSavedColleges(prev => prev.filter((c: any) => c.id !== collegeId));
     }
   };
 
-  const totalScholarshipValue = savedScholarships.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const totalScholarshipValue = savedScholarships.reduce((sum, s: any) => sum + (s.amount || 0), 0);
 
   const quickActions = [
     {
@@ -360,7 +303,6 @@ export const DashboardPage = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            {/* Saved Scholarships Section */}
             {savedScholarships.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -375,7 +317,7 @@ export const DashboardPage = () => {
                   </Link>
                 </div>
                 <div className="space-y-4">
-                  {savedScholarships.slice(0, 5).map((scholarship, index) => (
+                  {savedScholarships.slice(0, 5).map((scholarship: any, index) => (
                     <motion.div
                       key={scholarship.id || index}
                       initial={{ opacity: 0, x: -20 }}
@@ -386,7 +328,7 @@ export const DashboardPage = () => {
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 mb-1">{scholarship.scholarship_name}</h3>
+                              <h3 className="font-bold text-gray-900 mb-1">{scholarship.name || scholarship.scholarship_name}</h3>
                               <p className="text-sm text-gray-600 mb-2">{scholarship.provider}</p>
                               <div className="flex items-center gap-3 text-sm">
                                 <span className="font-bold text-blue-900">
@@ -424,7 +366,6 @@ export const DashboardPage = () => {
               </div>
             )}
 
-            {/* Saved Colleges Section */}
             {savedColleges.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -439,7 +380,7 @@ export const DashboardPage = () => {
                   </Link>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {savedColleges.slice(0, 4).map((college, index) => (
+                  {savedColleges.slice(0, 4).map((college: any, index) => (
                     <motion.div
                       key={college.id}
                       initial={{ opacity: 0, y: 20 }}

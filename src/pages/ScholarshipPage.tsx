@@ -6,22 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Search, 
-  Calendar, 
-  Award,
-  ExternalLink,
-  Heart,
-  ArrowUp,
-  Bookmark,
-  Check
+  Search, Calendar, Award, ExternalLink, Heart, ArrowUp
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 
 export const ScholarshipPage = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [scholarships, setScholarships] = useState([]);
   const [filteredScholarships, setFilteredScholarships] = useState([]);
@@ -30,7 +21,7 @@ export const ScholarshipPage = () => {
   const [selectedAmount, setSelectedAmount] = useState('all');
   const [loading, setLoading] = useState(true);
   const [showTopButton, setShowTopButton] = useState(false);
-  const [savedScholarships, setSavedScholarships] = useState<string[]>([]);
+  const [savedScholarships, setSavedScholarships] = useState([]);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   useEffect(() => {
@@ -43,56 +34,42 @@ export const ScholarshipPage = () => {
   }, [scholarships, searchTerm, selectedCategory, selectedAmount, showSavedOnly, savedScholarships]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setShowTopButton(window.scrollY > 300);
-    };
+    const handleScroll = () => setShowTopButton(window.scrollY > 300);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const loadSavedScholarships = () => {
-    const saved = localStorage.getItem('savedScholarshipIds');
+    const saved = localStorage.getItem('savedScholarships');
     if (saved) {
       setSavedScholarships(JSON.parse(saved));
     }
   };
 
-  const toggleSaveScholarship = async (scholarship: any) => {
-    const scholarshipId = `${scholarship.name}-${scholarship.provider}`;
-    const isSaved = savedScholarships.includes(scholarshipId);
+  const toggleSaveScholarship = (scholarship) => {
+    const isSaved = savedScholarships.some(s => s.id === scholarship.id);
 
     if (isSaved) {
-      const updated = savedScholarships.filter(id => id !== scholarshipId);
+      // Remove
+      const updated = savedScholarships.filter(s => s.id !== scholarship.id);
       setSavedScholarships(updated);
-      localStorage.setItem('savedScholarshipIds', JSON.stringify(updated));
-      
-      if (user) {
-        await supabase
-          .from('saved_scholarships')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('scholarship_name', scholarship.name);
-      }
-      
-      toast({ title: "Removed", description: "Scholarship removed from your dashboard" });
+      localStorage.setItem('savedScholarships', JSON.stringify(updated));
+      toast({ title: "Removed", description: "Scholarship removed from dashboard" });
     } else {
-      const updated = [...savedScholarships, scholarshipId];
+      // Add - make sure we save all needed fields
+      const newScholarship = {
+        id: scholarship.id,
+        name: scholarship.name,
+        provider: scholarship.provider,
+        amount: scholarship.amount,
+        deadline: scholarship.deadline,
+        description: scholarship.description,
+        url: scholarship.application_url
+      };
+      const updated = [...savedScholarships, newScholarship];
       setSavedScholarships(updated);
-      localStorage.setItem('savedScholarshipIds', JSON.stringify(updated));
-
-      if (user) {
-        await supabase.from('saved_scholarships').insert({
-          user_id: user.id,
-          scholarship_name: scholarship.name,
-          provider: scholarship.provider,
-          amount: Number(scholarship.amount) || 0,
-          deadline: scholarship.deadline,
-          description: scholarship.description,
-          url: scholarship.application_url
-        });
-      }
-      
-      toast({ title: "Saved!", description: "Scholarship saved to your dashboard" });
+      localStorage.setItem('savedScholarships', JSON.stringify(updated));
+      toast({ title: "Saved!", description: "Scholarship saved to dashboard" });
     }
   };
 
@@ -115,15 +92,12 @@ export const ScholarshipPage = () => {
     let filtered = scholarships;
 
     if (showSavedOnly) {
-      filtered = filtered.filter(s => {
-        const id = `${s.name}-${s.provider}`;
-        return savedScholarships.includes(id);
-      });
+      filtered = filtered.filter(s => savedScholarships.some(saved => saved.id === s.id));
     }
 
     if (searchTerm) {
       filtered = filtered.filter(scholarship =>
-        scholarship.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        scholarship.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         scholarship.provider?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -151,7 +125,7 @@ export const ScholarshipPage = () => {
     return categories.sort();
   };
 
-  const formatAmount = (amount: any) => {
+  const formatAmount = (amount) => {
     if (!amount) return 'Varies';
     const num = Number(amount);
     if (isNaN(num)) return amount;
@@ -181,38 +155,36 @@ export const ScholarshipPage = () => {
             <Award className="w-5 h-5 mr-2" />
             Financial Aid Opportunities
           </Badge>
-          <h1 className="text-7xl md:text-8xl font-black mb-6 leading-[1.3] overflow-visible">
+          <h1 className="text-7xl md:text-8xl font-black mb-6">
             <span className="block text-gray-900 mb-4">Scholarship</span>
             <span className="block text-gray-900">Database</span>
           </h1>
-          <p className="text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed">
-            Discover scholarships to help fund your education
-          </p>
+          <p className="text-2xl text-gray-700 max-w-4xl mx-auto">Discover scholarships to help fund your education</p>
         </motion.div>
 
         <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200 hover:border-blue-400 transition-all">
+          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200">
             <div className="text-4xl font-black text-gray-900 mb-3">
               <CountUp end={scholarships.length} />
             </div>
             <div className="text-gray-700 text-base font-medium">Available Scholarships</div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200 hover:border-blue-400 transition-all">
+          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200">
             <div className="text-4xl font-black text-gray-900 mb-3">
               <CountUp end={totalAmount / 1_000_000} suffix="M" prefix="$" />
             </div>
             <div className="text-gray-700 text-base font-medium">Total Aid Available</div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200 hover:border-blue-400 transition-all">
+          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-white rounded-3xl p-6 shadow-lg border border-gray-200">
             <div className="text-4xl font-black text-gray-900 mb-3">
               <CountUp end={Math.round(averageAmount / 1000)} suffix="K" prefix="$" />
             </div>
             <div className="text-gray-700 text-base font-medium">Average Award</div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-pink-100 rounded-3xl p-6 shadow-lg border border-pink-300 hover:border-pink-400 transition-all">
+          <motion.div whileHover={{ scale: 1.05 }} className="text-center bg-pink-100 rounded-3xl p-6 shadow-lg border border-pink-300">
             <div className="text-4xl font-black text-pink-900 mb-3">
               <CountUp end={savedScholarships.length} />
             </div>
@@ -228,26 +200,26 @@ export const ScholarshipPage = () => {
                 placeholder="Search scholarships..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 bg-white border-gray-300 text-gray-900 h-14"
+                className="pl-12 bg-white h-14"
               />
             </div>
             <div className="flex gap-3 flex-wrap">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48 bg-white border-gray-300 text-gray-900 h-14">
+                <SelectTrigger className="w-48 bg-white h-14">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {getUniqueCategories().map(category => (
                     <SelectItem key={category} value={category}>
-                      {category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={selectedAmount} onValueChange={setSelectedAmount}>
-                <SelectTrigger className="w-48 bg-white border-gray-300 text-gray-900 h-14">
+                <SelectTrigger className="w-48 bg-white h-14">
                   <SelectValue placeholder="Amount" />
                 </SelectTrigger>
                 <SelectContent>
@@ -262,7 +234,7 @@ export const ScholarshipPage = () => {
               <Button
                 variant={showSavedOnly ? "default" : "outline"}
                 onClick={() => setShowSavedOnly(!showSavedOnly)}
-                className={showSavedOnly ? "bg-pink-600 hover:bg-pink-500 text-white h-14" : "border-gray-300 text-gray-900 h-14"}
+                className={showSavedOnly ? "bg-pink-600 hover:bg-pink-500 text-white h-14" : "h-14"}
               >
                 <Heart className={`w-5 h-5 mr-2 ${showSavedOnly ? 'fill-white' : ''}`} />
                 Saved Only
@@ -273,13 +245,12 @@ export const ScholarshipPage = () => {
 
         <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredScholarships.length > 0 ? (
-            filteredScholarships.map((scholarship: any) => {
-              const scholarshipId = `${scholarship.name}-${scholarship.provider}`;
-              const isSaved = savedScholarships.includes(scholarshipId);
+            filteredScholarships.map((scholarship) => {
+              const isSaved = savedScholarships.some(s => s.id === scholarship.id);
 
               return (
                 <motion.div key={scholarship.id} whileHover={{ scale: 1.02 }}>
-                  <Card className="bg-white border-gray-200 hover:border-blue-400 shadow-lg transition-all h-full flex flex-col">
+                  <Card className="bg-white border-gray-200 hover:border-blue-400 shadow-lg h-full flex flex-col">
                     <CardHeader className="p-6">
                       <div className="flex items-start justify-between mb-2">
                         <CardTitle className="text-xl font-bold text-gray-900 flex-1 pr-2">{scholarship.name}</CardTitle>
@@ -287,7 +258,7 @@ export const ScholarshipPage = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleSaveScholarship(scholarship)}
-                          className={`shrink-0 ${isSaved ? "text-pink-600 hover:text-pink-700" : "text-gray-400 hover:text-gray-600"}`}
+                          className={`shrink-0 ${isSaved ? "text-pink-600" : "text-gray-400"}`}
                         >
                           <Heart className={`h-5 w-5 ${isSaved ? 'fill-pink-600' : ''}`} />
                         </Button>
@@ -305,8 +276,7 @@ export const ScholarshipPage = () => {
                       <div className="text-gray-700 text-sm leading-relaxed flex-1 mb-4">{scholarship.description}</div>
                       <Button asChild className="w-full bg-blue-900 hover:bg-blue-800 text-white">
                         <a href={scholarship.application_url} target="_blank" rel="noopener noreferrer">
-                          Apply Now
-                          <ExternalLink className="w-4 h-4 ml-2" />
+                          Apply Now <ExternalLink className="w-4 h-4 ml-2" />
                         </a>
                       </Button>
                     </CardContent>

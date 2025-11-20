@@ -416,7 +416,8 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
           // Now save to scholarship_bookmarks_2025_10_07_02_17
           console.log(`🔖 Saving bookmark for scholarship ID: ${scholarshipId}`);
           const { error: saveError } = await supabase
-            .from('scholarship_bookmarks_2025_10_07_02_17')
+            .from('saved_scholarships_2025_10_14_02_00')
+
             .insert({
               user_id: user.id,
               scholarship_id: scholarshipId
