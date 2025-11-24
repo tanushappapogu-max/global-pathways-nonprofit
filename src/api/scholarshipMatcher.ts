@@ -470,7 +470,7 @@ Return JSON only:
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Return valid JSON only. Match EXACT criteria.' },
           { role: 'user', content: prompt }
