@@ -109,7 +109,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2">
               <li className="flex items-center text-gray-400">
                 <Mail className="h-4 w-4 mr-2" />
-                info@globalpathways.org
+                info@globalpathwaysnonprofit.org
               </li>
               <li className="flex items-center text-gray-400">
                 <Globe className="h-4 w-4 mr-2" />
