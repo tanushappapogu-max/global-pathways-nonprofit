@@ -68,11 +68,26 @@ const navigate = useNavigate();
       console.log('Database scholarships found:', scholarships?.length || 0);
 
       // If we have fewer than 8, supplement with AI
-      if (!scholarships || scholarships.length < 8) {
-        console.log('Getting AI scholarships to reach minimum 8...');
-        const aiScholarships = await getAIScholarships(formData, 8 - (scholarships?.length || 0));
-        scholarships = [...(scholarships || []), ...aiScholarships];
-      }
+      // Get AI scholarships if needed
+if (!scholarships || scholarships.length < 8) {
+  console.log('Getting AI scholarships to reach minimum 8...');
+  const aiScholarships = await getAIScholarships(formData, 8 - (scholarships?.length || 0));
+  scholarships = [...(scholarships || []), ...aiScholarships];
+}
+
+// Get additional online scholarships
+console.log('Searching for additional online scholarships...');
+const onlineScholarships = await searchOnlineScholarships(formData);
+if (onlineScholarships.length > 0) {
+  scholarships = [...scholarships, ...onlineScholarships];
+  console.log('✅ Total scholarships with online search:', scholarships.length);
+}
+
+// Remove duplicates based on name
+scholarships = scholarships.filter((scholarship, index, self) =>
+  index === self.findIndex((s) => s.name === scholarship.name)
+);
+
 
       if (scholarships && scholarships.length > 0) {
         console.log('Total scholarships:', scholarships.length);
@@ -309,54 +324,155 @@ const navigate = useNavigate();
   };
 
   const getAIScholarships = async (profile, minCount) => {
-    try {
-      const prompt = `Find ${minCount} scholarships for a student with this profile:
-- Major: ${profile.major}
+  try {
+    const prompt = `Search the internet RIGHT NOW for ${minCount} REAL, CURRENT scholarships for this student profile:
+
+STUDENT PROFILE:
+- Major/Field: ${profile.major}
 - GPA: ${profile.gpa}
 - Ethnicity: ${profile.ethnicity}
 - Gender: ${profile.gender}
 - State: ${profile.state}
-- First Generation: ${profile.firstGeneration}
-- Interests: ${profile.extracurriculars}
+- First Generation: ${profile.firstGeneration ? 'Yes' : 'No'}
+- Activities: ${profile.extracurriculars}
+- Career Goals: ${profile.careerGoals}
 
-Return ONLY a JSON array with this exact structure (no markdown, no extra text):
+REQUIREMENTS:
+1. Search for scholarships that are ACTUALLY AVAILABLE RIGHT NOW in 2025-2026
+2. Find scholarships with REAL application URLs that work
+3. Include scholarships from: Fastweb, Scholarships.com, College Board, Cappex, Bold.org
+4. Prioritize scholarships that match the student's profile
+5. Include application deadlines in 2025 or 2026
+
+Return ONLY valid JSON array (no markdown, no explanation):
 [{
-  "name": "Scholarship Name",
+  "name": "Exact Scholarship Name",
   "provider": "Organization Name",
   "amount": 5000,
   "deadline": "2026-03-15",
-  "description": "Brief description",
-  "url": "https://example.com/apply",
+  "description": "What the scholarship is for",
+  "url": "https://actual-working-url.com/apply",
   "match": 85,
   "requirements": ["Requirement 1", "Requirement 2"]
 }]`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        })
-      });
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o", // This model has web search built-in
+        messages: [
+          {
+            role: "system",
+            content: "You are a scholarship search expert with real-time internet access. Search the web for current, legitimate scholarships with working application links. Always verify the scholarships exist and have valid URLs."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000 // Increased for more results
+      })
+    });
 
-      const data = await response.json();
-      const content = data.content?.[0]?.text || '[]';
-      
-      // Clean up any markdown formatting
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const aiScholarships = JSON.parse(cleanContent);
-      
-      console.log('AI generated scholarships:', aiScholarships.length);
-      return aiScholarships;
-    } catch (error) {
-      console.error('Error getting AI scholarships:', error);
-      return [];
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API Error:', errorData);
+      throw new Error(errorData.error?.message || 'API request failed');
     }
-  };
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '[]';
+    
+    console.log('Raw OpenAI response:', content);
+    
+    // Clean up any markdown formatting
+    const cleanContent = content
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+    
+    const aiScholarships = JSON.parse(cleanContent);
+    
+    console.log('✅ OpenAI found scholarships:', aiScholarships.length);
+    return aiScholarships;
+  } catch (error) {
+    console.error('❌ Error getting AI scholarships:', error);
+    return [];
+  }
+};
+
+const searchOnlineScholarships = async (profile) => {
+  try {
+    console.log('🔍 Searching for additional online scholarships...');
+    
+    // Build a search query based on profile
+    const searchTerms = [
+      profile.major,
+      profile.ethnicity,
+      profile.state,
+      profile.firstGeneration ? 'first generation' : '',
+      'scholarship 2025'
+    ].filter(Boolean).join(' ');
+
+    const prompt = `Search Google, Fastweb, Scholarships.com, and other scholarship sites for scholarships matching: "${searchTerms}"
+
+Find 3-5 additional scholarships with:
+- Valid application URLs
+- Clear deadlines
+- Specific award amounts
+
+Return ONLY JSON (no markdown):
+[{
+  "name": "Scholarship Name",
+  "provider": "Organization",
+  "amount": 5000,
+  "deadline": "2026-MM-DD",
+  "description": "Brief description",
+  "url": "https://real-url.com",
+  "match": 75,
+  "requirements": ["Requirement 1"]
+}]`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You have internet access. Search scholarship websites and return real scholarships with working URLs."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '[]';
+    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const onlineScholarships = JSON.parse(cleanContent);
+    
+    console.log('✅ Found additional online scholarships:', onlineScholarships.length);
+    return onlineScholarships;
+  } catch (error) {
+    console.error('❌ Error searching online:', error);
+    return [];
+  }
+};
 
   const saveMatches = async () => {
   // Check if user is signed in
