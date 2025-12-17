@@ -15,7 +15,7 @@ import {
   Zap, ArrowRight, CheckCircle, Brain, Calendar, Heart
 } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
-
+import { useNavigate } from 'react-router-dom';
 export const AutoScholarshipFinderPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -34,7 +34,7 @@ export const AutoScholarshipFinderPage = () => {
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
+const navigate = useNavigate();
   const handleArrayChange = (field, value, checked) => {
     setFormData(prev => ({
       ...prev,
@@ -359,104 +359,76 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
   };
 
   const saveMatches = async () => {
-    try {
-      if (!user) {
-        toast({
-          title: "Sign in required",
-          description: "Please sign in to save scholarships to your dashboard.",
-          variant: "destructive"
+  // Check if user is signed in
+  if (!user) {
+    toast({
+      title: "Sign in required",
+      description: "Please sign in to save scholarships to your dashboard.",
+      variant: "destructive"
+    });
+    
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
+    return;
+  }
+
+  try {
+    console.log('💾 Saving scholarships to localStorage...');
+
+    // Get existing saved scholarships from localStorage
+    const existingSaved = localStorage.getItem('savedScholarships');
+    const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
+
+    // Add new scholarships, avoiding duplicates
+    let addedCount = 0;
+    results.forEach(scholarship => {
+      const alreadySaved = savedScholarships.some(s => 
+        s.name === scholarship.name && s.provider === scholarship.provider
+      );
+
+      if (!alreadySaved) {
+        savedScholarships.push({
+          id: scholarship.id || Date.now() + Math.random(),
+          name: scholarship.name,
+          provider: scholarship.provider,
+          amount: scholarship.amount,
+          deadline: scholarship.deadline,
+          description: scholarship.description,
+          url: scholarship.url
         });
-        return;
+        addedCount++;
+        console.log(`✅ Added: ${scholarship.name}`);
+      } else {
+        console.log(`ℹ️ Already saved: ${scholarship.name}`);
       }
+    });
 
-      console.log('💾 Starting to save scholarships...');
+    // Save back to localStorage
+    localStorage.setItem('savedScholarships', JSON.stringify(savedScholarships));
+    console.log(`✅ Total saved to localStorage: ${savedScholarships.length}`);
 
-      // Save each scholarship
-      const savedCount = await Promise.all(results.map(async (scholarship) => {
-        try {
-          console.log(`📝 Processing: ${scholarship.name}`);
-          
-          // Check if scholarship exists in database
-          let { data: existingScholarship } = await supabase
-            .from('scholarships')
-            .select('id')
-            .eq('name', scholarship.name)
-            .eq('provider', scholarship.provider)
-            .single();
-
-          let scholarshipId = existingScholarship?.id;
-
-          // If doesn't exist, create it
-          if (!scholarshipId) {
-            console.log(`➕ Creating new scholarship in database: ${scholarship.name}`);
-            const { data: newScholarship, error: createError } = await supabase
-              .from('scholarships')
-              .insert({
-                name: scholarship.name,
-                provider: scholarship.provider,
-                amount: scholarship.amount,
-                deadline: scholarship.deadline,
-                description: scholarship.description,
-                application_url: scholarship.url,
-                category: 'merit'
-              })
-              .select('id')
-              .single();
-
-            if (createError) {
-              console.error('❌ Error creating scholarship:', createError);
-              throw createError;
-            }
-            scholarshipId = newScholarship.id;
-            console.log(`✅ Created scholarship with ID: ${scholarshipId}`);
-          } else {
-            console.log(`✅ Found existing scholarship with ID: ${scholarshipId}`);
-          }
-
-          // Now save to scholarship_bookmarks_2025_10_07_02_17
-          console.log(`🔖 Saving bookmark for scholarship ID: ${scholarshipId}`);
-          const { error: saveError } = await supabase
-            .from('saved_scholarships_2025_10_14_02_00')
-
-            .insert({
-              user_id: user.id,
-              scholarship_id: scholarshipId
-            });
-
-          if (saveError) {
-            if (saveError.code === '23505') {
-              console.log(`ℹ️ Scholarship already saved: ${scholarship.name}`);
-              return true; // Already saved, not an error
-            }
-            console.error('❌ Error saving bookmark:', saveError);
-            throw saveError;
-          }
-
-          console.log(`✅ Successfully saved: ${scholarship.name}`);
-          return true;
-        } catch (err) {
-          console.error(`❌ Error saving scholarship: ${scholarship.name}`, err);
-          return false;
-        }
-      }));
-
-      const successCount = savedCount.filter(Boolean).length;
-      console.log(`✅ Total saved: ${successCount}/${results.length}`);
-
+    if (addedCount > 0) {
       toast({
         title: "Success!",
-        description: `${successCount} scholarship(s) saved to your dashboard!`
+        description: `${addedCount} scholarship(s) saved to your dashboard!`
       });
-
-    } catch (error) {
-      console.error('❌ Error saving matches:', error);
+    } else {
       toast({
-        title: "Error",
-        description: "Failed to save some scholarships. Please try again.",
-        variant: "destructive"
+        title: "Already Saved",
+        description: "These scholarships are already in your dashboard.",
       });
     }
-  };
+
+  } catch (error) {
+    console.error('❌ Error saving matches:', error);
+    toast({
+      title: "Error",
+      description: "Failed to save scholarships. Please try again.",
+      variant: "destructive"
+    });
+  }
+};
 
   const getMockResults = () => {
     return [
