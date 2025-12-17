@@ -452,9 +452,7 @@ const AboutPage = () => {
             {/* Team Stats */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { end: teamMembers.length, suffix: "+", label: "Team Members" },
-                { end: 1, suffix: "+", label: "Years Combined Experience" },
-                { end: 2, suffix: "+", label: "Countries Represented" }
+                
               ].map((stat, index) => (
                 <motion.div
                   key={index}

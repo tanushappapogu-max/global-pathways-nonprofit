@@ -49,7 +49,7 @@ export const SignupPage = () => {
         // Email confirmation required
         toast({
           title: "Check Your Email",
-          description: "We sent you a verification link. Click it to complete signup.",
+          description: "We sent you a verification link. Click it to complete signup. This email may be located in your spam.",
         });
         setTimeout(() => navigate('/login'), 2000);
       }
