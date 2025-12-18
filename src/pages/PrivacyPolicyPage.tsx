@@ -55,8 +55,8 @@ export const PrivacyPolicyPage = () => {
               <h2>Contact Us</h2>
               <p>
                 If you have any questions about this Privacy Policy, please contact us at{' '}
-                <a href="mailto:privacy@globalpathways.org" className="text-blue-400 hover:underline">
-                  privacy@globalpathways.org
+                <a href="mailto:info@globalpathwaysnonprofit.org" className="text-blue-400 hover:underline">
+                  info@globalpathwaysnonprofit.org
                 </a>.
               </p>
             </div>
