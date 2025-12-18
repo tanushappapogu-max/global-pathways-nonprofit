@@ -317,7 +317,7 @@ export const DashboardPage = () => {
                   </Link>
                 </div>
                 <div className="space-y-4">
-                  {savedScholarships.slice(0, 5).map((scholarship: any, index) => (
+                  {savedScholarships.map((scholarship: any, index) => (
                     <motion.div
                       key={scholarship.id || index}
                       initial={{ opacity: 0, x: -20 }}

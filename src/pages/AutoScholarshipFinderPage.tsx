@@ -1037,33 +1037,49 @@ const extractRequirements = (text) => {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {results.map((scholarship, index) => (
-                      <motion.div key={index} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1 }}>
-                        <Card className="border-l-4 border-l-blue-900">
-                          <CardContent className="p-6">
-                            <div className="flex justify-between gap-4">
-                              <div className="flex-1">
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">{scholarship.name}</h3>
-                                <p className="text-blue-900 font-medium mb-3">{scholarship.provider}</p>
-                                <p className="text-gray-700 text-sm mb-4">{scholarship.description}</p>
-                                <div className="flex items-center gap-3 text-sm mb-4">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>Deadline: {scholarship.deadline}</span>
-                                  <Badge className="bg-green-100 text-green-800">{Math.round(scholarship.match)}% Match</Badge>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-3xl font-black text-blue-900 mb-4">${scholarship.amount.toLocaleString()}</div>
-                                <Button size="sm" className="bg-blue-900" asChild>
-                                  <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply</a>
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                    
+                    {results.map((scholarship, index) => {
+  // Check if already saved
+  const existingSaved = localStorage.getItem('savedScholarships');
+  const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
+  const isAlreadySaved = savedScholarships.some(s => 
+    s.name === scholarship.name && s.provider === scholarship.provider
+  );
+
+  return (
+    <motion.div key={index} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1 }}>
+      <Card className={`border-l-4 ${isAlreadySaved ? 'border-l-green-500 bg-green-50' : 'border-l-blue-900'}`}>
+        <CardContent className="p-6">
+          <div className="flex justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-900">{scholarship.name}</h3>
+                {isAlreadySaved && (
+                  <Badge className="bg-green-600 text-white">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Saved
+                  </Badge>
+                )}
+              </div>
+              <p className="text-blue-900 font-medium mb-3">{scholarship.provider}</p>
+              <p className="text-gray-700 text-sm mb-4">{scholarship.description}</p>
+              <div className="flex items-center gap-3 text-sm mb-4">
+                <Calendar className="h-4 w-4" />
+                <span>Deadline: {scholarship.deadline}</span>
+                <Badge className="bg-green-100 text-green-800">{Math.round(scholarship.match)}% Match</Badge>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-black text-blue-900 mb-4">${scholarship.amount.toLocaleString()}</div>
+              <Button size="sm" className="bg-blue-900" asChild>
+                <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply</a>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+})}
                     {results.length > 0 && (
                       <div className="text-center pt-8">
                         <Button className="bg-pink-600 hover:bg-pink-500 px-8 py-6 text-lg" onClick={saveMatches}>
