@@ -30,9 +30,15 @@ export const Footer: React.FC = () => {
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
+              <a
+  href="https://www.instagram.com/globalpathways_nonprofit"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-gray-400 hover:text-white transition-colors"
+>
+  <Instagram className="h-5 w-5" />
+</a>
+
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Linkedin className="h-5 w-5" />
               </a>
@@ -110,6 +116,7 @@ export const Footer: React.FC = () => {
               <li className="flex items-center text-gray-400">
                 <Mail className="h-4 w-4 mr-2" />
                 info@globalpathwaysnonprofit.org
+                
               </li>
               <li className="flex items-center text-gray-400">
                 <Globe className="h-4 w-4 mr-2" />
