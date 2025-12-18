@@ -75,13 +75,17 @@ if (!scholarships || scholarships.length < 8) {
   scholarships = [...(scholarships || []), ...aiScholarships];
 }
 
-// Get additional online scholarships
-console.log('Searching for additional online scholarships...');
+// Get scholarships from Serper (real Google results)
+console.log('🔍 Searching web with Serper API...');
+const serperScholarships = await searchScholarshipsViaSerper(formData);
+scholarships = [...scholarships, ...serperScholarships];
+console.log('✅ Total with Serper:', scholarships.length);
+
+// Get additional scholarships from OpenAI
+console.log('🤖 Getting OpenAI scholarships...');
 const onlineScholarships = await searchOnlineScholarships(formData);
-if (onlineScholarships.length > 0) {
-  scholarships = [...scholarships, ...onlineScholarships];
-  console.log('✅ Total scholarships with online search:', scholarships.length);
-}
+scholarships = [...scholarships, ...onlineScholarships];
+console.log('✅ Total scholarships:', scholarships.length);
 
 // Remove duplicates based on name
 scholarships = scholarships.filter((scholarship, index, self) =>
@@ -474,6 +478,142 @@ Return ONLY JSON (no markdown):
   }
 };
 
+const searchScholarshipsViaSerper = async (profile) => {
+  try {
+    console.log('🔍 Searching web via Serper API...');
+    
+    // Build smart search query
+    const searchQuery = [
+      profile.major,
+      'scholarship',
+      profile.state,
+      profile.ethnicity,
+      profile.firstGeneration ? 'first generation' : '',
+      '2025 2026 apply deadline'
+    ].filter(Boolean).join(' ');
+
+    const response = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': import.meta.env.VITE_SERPER_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: searchQuery,
+        num: 10
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Serper API request failed');
+    }
+
+    const data = await response.json();
+    
+    // Parse organic search results
+    const scholarships = data.organic?.slice(0, 10).map((result, index) => {
+      const amount = extractAmount(result.snippet + ' ' + result.title);
+      const deadline = extractDeadline(result.snippet + ' ' + result.title);
+      
+      return {
+        id: `serper-${Date.now()}-${index}`,
+        name: cleanScholarshipName(result.title),
+        provider: extractProvider(result.link),
+        amount: amount || 5000,
+        deadline: deadline || '2025-12-31',
+        description: result.snippet || 'Scholarship opportunity',
+        url: result.link,
+        match: calculateSerperMatch(result, profile),
+        requirements: extractRequirements(result.snippet),
+        source: 'Web Search'
+      };
+    }).filter(s => 
+      s.name.toLowerCase().includes('scholarship') ||
+      s.description.toLowerCase().includes('scholarship') ||
+      s.url.toLowerCase().includes('scholarship')
+    ) || [];
+
+    console.log('✅ Serper found scholarships:', scholarships.length);
+    return scholarships;
+
+  } catch (error) {
+    console.error('❌ Serper Error:', error);
+    return [];
+  }
+};
+
+// Helper functions for Serper
+const extractAmount = (text) => {
+  const matches = text.match(/\$[\d,]+/g);
+  if (!matches) return null;
+  const amounts = matches.map(m => parseInt(m.replace(/\$|,/g, '')));
+  return Math.max(...amounts);
+};
+
+const extractDeadline = (text) => {
+  const datePatterns = [
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+202[5-6]/i,
+    /\d{1,2}\/\d{1,2}\/202[5-6]/,
+    /202[5-6]-\d{2}-\d{2}/
+  ];
+  
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      try {
+        const date = new Date(match[0]);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      } catch (e) {}
+    }
+  }
+  return null;
+};
+
+const cleanScholarshipName = (title) => {
+  return title
+    .replace(/\s*-\s*Scholarships?\.com.*$/i, '')
+    .replace(/\s*\|\s*.*$/, '')
+    .replace(/\s*-\s*[A-Z][a-zA-Z\s]+$/, '')
+    .replace(/\s*\.\.\.$/, '')
+    .trim();
+};
+
+const extractProvider = (url) => {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    const name = domain.split('.')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    return 'Various';
+  }
+};
+
+const calculateSerperMatch = (result, profile) => {
+  let score = 70;
+  const text = (result.title + ' ' + result.snippet).toLowerCase();
+  
+  if (profile.major && text.includes(profile.major.toLowerCase())) score += 15;
+  if (profile.state && text.includes(profile.state.toLowerCase())) score += 10;
+  if (profile.ethnicity && text.includes(profile.ethnicity.toLowerCase())) score += 15;
+  if (profile.firstGeneration && (text.includes('first generation') || text.includes('first-generation'))) score += 10;
+  
+  return Math.min(95, score);
+};
+
+const extractRequirements = (text) => {
+  const requirements = [];
+  
+  const gpaMatch = text.match(/GPA.*?([\d.]+)/i);
+  if (gpaMatch) requirements.push(`GPA ${gpaMatch[1]}+`);
+  
+  if (text.includes('essay')) requirements.push('Essay required');
+  if (text.includes('letter of recommendation') || text.includes('recommendation letter')) requirements.push('Letter of recommendation');
+  if (text.includes('transcript')) requirements.push('Transcript required');
+  
+  return requirements.length > 0 ? requirements : ['Check eligibility requirements'];
+};
   const saveMatches = async () => {
   // Check if user is signed in
   if (!user) {
