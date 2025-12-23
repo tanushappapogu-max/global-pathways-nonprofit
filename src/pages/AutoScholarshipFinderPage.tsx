@@ -91,6 +91,13 @@ console.log('✅ Total scholarships:', scholarships.length);
 scholarships = scholarships.filter((scholarship, index, self) =>
   index === self.findIndex((s) => s.name === scholarship.name)
 );
+const today = new Date();
+
+scholarships = scholarships.filter(scholarship => {
+  if (!scholarship.deadline) return false; // Skip if no deadline
+  const deadlineDate = new Date(scholarship.deadline);
+  return deadlineDate >= today; // Keep only future scholarships
+});
 
 
       if (scholarships && scholarships.length > 0) {
@@ -311,6 +318,7 @@ scholarships = scholarships.filter((scholarship, index, self) =>
             requirements: scholarship.eligibility ? [scholarship.eligibility] : ['Check eligibility requirements']
           };
         });
+        
 
       // Sort by match score and return top matches
       const topMatches = matches
@@ -342,11 +350,11 @@ STUDENT PROFILE:
 - Career Goals: ${profile.careerGoals}
 
 REQUIREMENTS:
-1. Search for scholarships that are ACTUALLY AVAILABLE RIGHT NOW in 2025-2026
+1. Search for scholarships that are ACTUALLY AVAILABLE RIGHT NOW in december 2025-2026
 2. Find scholarships with REAL application URLs that work
 3. Include scholarships from: Fastweb, Scholarships.com, College Board, Cappex, Bold.org
 4. Prioritize scholarships that match the student's profile
-5. Include application deadlines in 2025 or 2026
+5. Include application deadlines in december 2025 or 2026
 
 Return ONLY valid JSON array (no markdown, no explanation):
 [{
