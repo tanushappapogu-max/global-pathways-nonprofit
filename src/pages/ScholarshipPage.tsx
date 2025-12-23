@@ -46,9 +46,11 @@ export const ScholarshipPage = () => {
     }
   };
 
-  const toggleSaveScholarship = (scholarship) => {
-    const isSaved = savedScholarships.some(s => s.id === scholarship.id);
-
+ const toggleSaveScholarship = (scholarship) => {
+  // Check by name and provider instead of just ID
+  const isSaved = savedScholarships.some(s => 
+    s.name === scholarship.name && s.provider === scholarship.provider
+  );
     if (isSaved) {
       // Remove
       const updated = savedScholarships.filter(s => s.id !== scholarship.id);
@@ -89,11 +91,16 @@ export const ScholarshipPage = () => {
   };
 
   const filterScholarships = () => {
-    let filtered = scholarships;
+  let filtered = scholarships;
 
-    if (showSavedOnly) {
-      filtered = filtered.filter(s => savedScholarships.some(saved => saved.id === s.id));
-    }
+  if (showSavedOnly) {
+    // Match by both name and provider (more reliable than ID)
+    filtered = filtered.filter(s => 
+      savedScholarships.some(saved => 
+        saved.name === s.name && saved.provider === s.provider
+      )
+    );
+  }
 
     if (searchTerm) {
       filtered = filtered.filter(scholarship =>
@@ -244,10 +251,12 @@ export const ScholarshipPage = () => {
         </motion.div>
 
         <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredScholarships.length > 0 ? (
-            filteredScholarships.map((scholarship) => {
-              const isSaved = savedScholarships.some(s => s.id === scholarship.id);
-
+         {filteredScholarships.length > 0 ? (
+  filteredScholarships.map((scholarship) => {
+    // Check by name and provider
+    const isSaved = savedScholarships.some(s => 
+      s.name === scholarship.name && s.provider === scholarship.provider
+    );
               return (
                 <motion.div key={scholarship.id} whileHover={{ scale: 1.02 }}>
                   <Card className="bg-white border-gray-200 hover:border-blue-400 shadow-lg h-full flex flex-col">
