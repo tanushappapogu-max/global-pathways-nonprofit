@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +16,13 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [savedScholarships, setSavedScholarships] = useState<any[]>([]);
   const [savedColleges, setSavedColleges] = useState<any[]>([]);
   const [profileCompletion, setProfileCompletion] = useState(25);
   const [showNotifications, setShowNotifications] = useState(false);
   const [progressTasks, setProgressTasks] = useState([
-    { id: 1, title: "Complete your profile", completed: false, link: "/dashboard" },
+    { id: 1, title: "Complete your profile", completed: false, link: "/profile" },
     { id: 2, title: "Submit FAFSA application", completed: false, link: "/fafsa" },
     { id: 3, title: "Save 5 scholarships", completed: false, link: "/scholarships" },
     { id: 4, title: "Compare 3 colleges", completed: false, link: "/colleges" },
@@ -94,6 +95,12 @@ export const DashboardPage = () => {
         const scholarships = JSON.parse(savedScholarshipsData);
         if (scholarships.length >= 5) updatedTasks[2].completed = true;
       }
+      
+      if (savedCollegeIds) {
+        const collegeIds = JSON.parse(savedCollegeIds);
+        if (collegeIds.length >= 3) updatedTasks[3].completed = true;
+      }
+      
       saveTasks(updatedTasks);
       
     } catch (error) {
@@ -111,11 +118,14 @@ export const DashboardPage = () => {
     return score;
   };
 
-  const removeScholarship = (scholarshipId: string | number) => {
+  const removeScholarship = (scholarshipName: string, scholarshipProvider: string) => {
     const saved = localStorage.getItem('savedScholarships');
     if (saved) {
       const scholarships = JSON.parse(saved);
-      const updated = scholarships.filter((s: any) => s.id !== scholarshipId);
+      // Remove by name and provider match
+      const updated = scholarships.filter((s: any) => 
+        !(s.name === scholarshipName && s.provider === scholarshipProvider)
+      );
       localStorage.setItem('savedScholarships', JSON.stringify(updated));
       setSavedScholarships(updated);
     }
@@ -131,7 +141,22 @@ export const DashboardPage = () => {
     }
   };
 
-  const totalScholarshipValue = savedScholarships.reduce((sum, s: any) => sum + (s.amount || 0), 0);
+  // Calculate total scholarship value properly
+  const totalScholarshipValue = savedScholarships.reduce((sum, s: any) => {
+    const amount = Number(s.amount);
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+
+  // Format large numbers nicely
+  const formatCurrency = (value: number) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`;
+    } else {
+      return `$${value}`;
+    }
+  };
 
   const quickActions = [
     {
@@ -254,7 +279,11 @@ export const DashboardPage = () => {
                       </div>
                     </div>
                   </div>
-                  <Button size="sm" className="bg-yellow-600 hover:bg-yellow-500 text-white">
+                  <Button 
+                    size="sm" 
+                    className="bg-yellow-600 hover:bg-yellow-500 text-white"
+                    onClick={() => navigate('/profile')}
+                  >
                     Complete Now
                   </Button>
                 </CardContent>
@@ -274,7 +303,14 @@ export const DashboardPage = () => {
         >
           {[
             { icon: Award, label: "Scholarships Saved", value: savedScholarships.length, color: "blue", bgColor: "bg-blue-100" },
-            { icon: DollarSign, label: "Potential Aid", value: Math.round(totalScholarshipValue / 1000), prefix: "$", suffix: "K", color: "green", bgColor: "bg-green-100" },
+            { 
+              icon: DollarSign, 
+              label: "Potential Aid", 
+              value: totalScholarshipValue, 
+              color: "green", 
+              bgColor: "bg-green-100",
+              isFormatted: true 
+            },
             { icon: School, label: "Colleges Saved", value: savedColleges.length, color: "purple", bgColor: "bg-purple-100" },
             { icon: Target, label: "Profile Complete", value: profileCompletion, suffix: "%", color: "orange", bgColor: "bg-orange-100" }
           ].map((stat, index) => (
@@ -292,7 +328,11 @@ export const DashboardPage = () => {
                     <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
                   </div>
                   <div className="text-3xl font-black text-gray-900 mb-1">
-                    <CountUp end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
+                    {stat.isFormatted ? (
+                      formatCurrency(stat.value)
+                    ) : (
+                      <CountUp end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
+                    )}
                   </div>
                   <p className="text-gray-600 text-sm">{stat.label}</p>
                 </CardContent>
@@ -310,7 +350,7 @@ export const DashboardPage = () => {
                     <Heart className="h-6 w-6 text-pink-500 fill-pink-500" />
                     Saved Scholarships ({savedScholarships.length})
                   </h2>
-                  <Link to="/scholarships">
+                  <Link to="/scholarships?saved=true">
                     <Button variant="outline" size="sm" className="border-gray-300 text-gray-900">
                       View All
                     </Button>
@@ -319,7 +359,7 @@ export const DashboardPage = () => {
                 <div className="space-y-4">
                   {savedScholarships.map((scholarship: any, index) => (
                     <motion.div
-                      key={scholarship.id || index}
+                      key={index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
@@ -351,7 +391,7 @@ export const DashboardPage = () => {
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
-                                onClick={() => removeScholarship(scholarship.id)}
+                                onClick={() => removeScholarship(scholarship.name, scholarship.provider)}
                                 className="text-gray-500 hover:text-red-600"
                               >
                                 <X className="h-4 w-4" />

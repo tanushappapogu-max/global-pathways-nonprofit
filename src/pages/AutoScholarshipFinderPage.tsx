@@ -770,6 +770,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Academic Information</h2>
                   <p className="text-gray-700 text-lg">Tell us about your academic achievements</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -812,6 +813,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Personal Background</h2>
                   <p className="text-gray-700 text-lg">Help us find scholarships that match your background</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -896,6 +898,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Financial Information</h2>
                   <p className="text-gray-700 text-lg">This helps us find need-based scholarships</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -930,6 +933,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Activities & Leadership</h2>
                   <p className="text-gray-700 text-lg">Showcase your extracurricular involvement and achievements</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 
                 <div className="space-y-6">
@@ -978,6 +982,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Career Goals & Preferences</h2>
                   <p className="text-gray-700 text-lg">Tell us about your future plans and college preferences</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 
                 <div className="space-y-6">
@@ -1016,6 +1021,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Additional Information</h2>
                   <p className="text-gray-700 text-lg">Share any unique circumstances or challenges</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 
                 <div className="space-y-6">
@@ -1037,6 +1043,7 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900">Your Matches</h2>
                   <p className="text-gray-700 text-lg">Found {results.length} scholarships for you</p>
+                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
                 </div>
                 {loading ? (
                   <div className="text-center py-12">
