@@ -140,7 +140,7 @@ const Index = () => {
               
               <button className="group px-10 py-7 bg-white border-2 border-blue-900 text-blue-900 rounded-xl text-xl font-bold shadow-lg hover:bg-blue-900 hover:text-white transition-all duration-300">
                 <span className="flex items-center justify-center gap-3">
-                  <BookOpen className="w-6 h-6" />
+                  <BookOpen className="w-6 h-6 group-hover:rotate-45 transition-transform duration-500" />
                   Browse Scholarships
                 </span>
               </button>
