@@ -116,16 +116,16 @@ const Index = () => {
             {/* Main Headline */}
             <h1 className="text-7xl md:text-8xl font-black mb-8 leading-tight">
               <span className="block mb-4 text-gray-900">
-                Your Path to
+                College Guidance 
               </span>
               <span className="block text-gray-900">
-                U.S. Higher Education
+                Built for todays students 
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed font-light">
-              Comprehensive guidance for international and underprivileged students with AI-powered scholarship matching and real-time updates.
+              Comprehensive guidance for highschool students with AI-powered scholarship matching and real-time updates.
             </p>
             
             {/* CTA Buttons */}
