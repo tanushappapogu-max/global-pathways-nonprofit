@@ -125,7 +125,7 @@ const Index = () => {
 
             {/* Subheadline */}
             <p className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed font-light">
-              Comprehensive guidance for highschool students with AI-powered scholarship matching and real-time updates.
+              Comprehensive guidance for highschool students with AI-powered scholarship matching, accurate cost-calculation, and real-time updates.
             </p>
             
             {/* CTA Buttons */}
