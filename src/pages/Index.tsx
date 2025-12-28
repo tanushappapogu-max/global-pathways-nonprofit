@@ -119,7 +119,7 @@ const Index = () => {
                 College Guidance 
               </span>
               <span className="block text-gray-900">
-                Built for todays students 
+                Built for Todays Students 
               </span>
             </h1>
 
