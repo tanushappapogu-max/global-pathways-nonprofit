@@ -1,0 +1,6 @@
+-- First, let's check the current structure of the scholarships table
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns 
+WHERE table_name = 'scholarships' 
+AND table_schema = 'public'
+ORDER BY ordinal_position;
