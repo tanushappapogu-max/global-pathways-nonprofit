@@ -1,358 +1,257 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  GraduationCap, 
-  Globe, 
-  DollarSign, 
-  Calendar, 
-  BarChart3, 
-  Users, 
-  BookOpen, 
-  Clock,
-  ArrowRight,
-  Sparkles,
-  Star,
-  Zap,
-  Target,
-  TrendingUp,
-  Award,
-  Search,
-  Calculator,
-  CheckCircle,
-  Rocket
-} from 'lucide-react';
+import { GraduationCap, Globe, DollarSign, Users, BookOpen, ArrowRight, Sparkles, Star, Award, Search, Calculator, CheckCircle, Rocket, TrendingUp, Target, Zap, Heart, Shield, Clock } from 'lucide-react';
 
-import { ShinyText } from '@/components/animations/ShinyText';
-import { Magnetic } from '@/components/animations/Magnetic';
-import { CountUp } from '@/components/animations/CountUp';
+const ShinyText = ({ children, className = "" }) => {
+  return (
+    <span className={`inline-block animate-shimmer bg-gradient-to-r from-blue-900 via-blue-700 to-blue-900 bg-[length:200%_100%] bg-clip-text text-transparent ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+const CountUp = ({ end, suffix = "", prefix = "" }) => {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    const duration = 2000;
+    const steps = 60;
+    const increment = end / steps;
+    let current = 0;
+    
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    
+    return () => clearInterval(timer);
+  }, [end]);
+  
+  return <span>{prefix}{count}{suffix}</span>;
+};
 
 const Index = () => {
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const [isVisible, setIsVisible] = useState(false);
-  const [heroContent, setHeroContent] = useState(null);
-  const [statsContent, setStatsContent] = useState(null);
-  const [featuresContent, setFeaturesContent] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
-  useEffect(() => {
-    setIsVisible(true);
-    fetchHomepageContent();
-  }, []);
+  const stats = [
+    { number: 500, label: "Students Helped", suffix: "+", icon: Users },
+    { number: 2.5, label: "Million in Aid Found", prefix: "$", suffix: "M", icon: DollarSign },
+    { number: 95, label: "Success Rate", suffix: "%", icon: TrendingUp },
+    { number: 1000, label: "Scholarships Available", suffix: "+", icon: Award }
+  ];
 
-  const fetchHomepageContent = async () => {
-    try {
-      const { data: heroData } = await supabase
-        .from('homepage_content_2025_10_14_03_00')
-        .select('*')
-        .eq('section_name', 'hero')
-        .eq('subsection_name', 'main_content')
-        .single();
-
-      if (heroData) setHeroContent(heroData.content);
-
-      const { data: statsData } = await supabase
-        .from('homepage_content_2025_10_14_03_00')
-        .select('*')
-        .eq('section_name', 'stats')
-        .eq('subsection_name', 'numbers')
-        .single();
-
-      if (statsData) setStatsContent(statsData.content);
-
-      const { data: featuresData } = await supabase
-        .from('homepage_content_2025_10_14_03_00')
-        .select('*')
-        .eq('section_name', 'features')
-        .eq('subsection_name', 'main_features')
-        .single();
-
-      if (featuresData) setFeaturesContent(featuresData.content);
-    } catch (error) {
-      console.error('Error fetching homepage content:', error);
+  const features = [
+    {
+      title: "AI Scholarship Finder",
+      description: "Get personalized scholarship recommendations using advanced AI matching algorithms and real-time web search.",
+      icon: Search,
+      badge: "Most Popular"
+    },
+    {
+      title: "Cost Calculator",
+      description: "Calculate your total education costs with our comprehensive financial planning tool tailored to your profile.",
+      icon: Calculator,
+      badge: "Essential"
+    },
+    {
+      title: "College Database",
+      description: "Explore thousands of colleges with detailed information, comparison tools, and acceptance predictions.",
+      icon: GraduationCap,
+      badge: "Comprehensive"
     }
-  };
+  ];
 
-  const defaultHero = {
-    title: "Your Path to U.S. Higher Education",
-    subtitle: "Comprehensive guidance for international and underprivileged students with AI-powered scholarship matching and real-time updates.",
-    primary_button: { text: "Try AI Scholarship Finder", link: "/auto-scholarships" },
-    secondary_button: { text: "Browse Scholarships", link: "/scholarships" }
-  };
-
-  const defaultStats = {
-    stats: [
-      { number: 500, label: "Students Helped", suffix: "+", color: "text-blue-600", icon: "Users" },
-      { number: 2.5, label: "Million in Aid Found", prefix: "$", suffix: "M", color: "text-green-600", icon: "DollarSign" },
-      { number: 95, label: "Success Rate", suffix: "%", color: "text-purple-600", icon: "TrendingUp" },
-      { number: 1000, label: "Scholarships Available", suffix: "+", color: "text-orange-600", icon: "Award" }
-    ]
-  };
-
-  const defaultFeatures = {
-    features: [
-      {
-        title: "AI Scholarship Finder",
-        description: "Get personalized scholarship recommendations using advanced AI matching algorithms and real-time web search.",
-        icon: "Search",
-        color: "from-blue-950 to-blue-900",
-        link: "/auto-scholarships"
-      },
-      {
-        title: "Cost Calculator",
-        description: "Calculate your total education costs with our comprehensive financial planning tool tailored to your profile.",
-        icon: "Calculator",
-        color: "from-blue-950 to-blue-900",
-        link: "/cost-calculator"
-      },
-      {
-        title: "College Database",
-        description: "Explore thousands of colleges with detailed information, comparison tools, and acceptance predictions.",
-        icon: "GraduationCap",
-        color: "from-blue-950 to-blue-900",
-        link: "/colleges"
-      }
-    ]
-  };
-
-  const hero = heroContent || defaultHero;
-  const stats = statsContent || defaultStats;
-  const features = featuresContent || defaultFeatures;
-
-  const getIconComponent = (iconName) => {
-    const icons = {
-      Search, Calculator, GraduationCap, Award, TrendingUp, Clock, Users, DollarSign, Target
-    };
-    return icons[iconName] || Search;
-  };
+  const benefits = [
+    { icon: Shield, text: "501(c)(3) Nonprofit (pending)" },
+    { icon: Heart, text: "100% Free" },
+    { icon: Sparkles, text: "AI-Powered Matching" }
+  ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-blue-50 relative overflow-visible">
-      
-      
+    <div className="min-h-screen bg-blue-50 relative overflow-hidden">
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes pulse-subtle {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        .animate-shimmer {
+          animation: shimmer 3s linear infinite;
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        .animate-pulse-subtle {
+          animation: pulse-subtle 3s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full filter blur-3xl opacity-30 animate-float"></div>
+        <div className="absolute bottom-40 right-20 w-80 h-80 bg-blue-300 rounded-full filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '3s' }}></div>
+      </div>
+
       {/* Hero Section */}
-      <section className="relative py-32 px-4 text-center">
+      <section className="relative pt-32 pb-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Badge className="mb-8 bg-blue-900 border-0 px-6 py-3 text-base font-medium">
-              <Rocket className="w-5 h-5 mr-2" />
-              AI-Powered College Guidance Platform
-            </Badge>
+          <div className="text-center relative z-10">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 mb-8 px-6 py-3 bg-blue-900 text-white rounded-full font-semibold shadow-lg border-0">
+              <Rocket className="w-5 h-5" />
+              <span>AI-Powered College Guidance Platform</span>
+            </div>
             
-            <motion.h1 
-  className="text-7xl md:text-8xl font-black mb-8 leading-[1.3] overflow-visible"
->
-  <span className="block mb-4 text-gray-900">
-    Your Path to
-  </span>
-  <span className="inline-block bg-gray-900 bg-clip-text text-transparent pb-2">
-    U.S. Higher Education
-  </span>
-</motion.h1>
+            {/* Main Headline */}
+            <h1 className="text-7xl md:text-8xl font-black mb-8 leading-tight">
+              <span className="block mb-4 text-gray-900">
+                Your Path to
+              </span>
+              <span className="block text-gray-900">
+                U.S. Higher Education
+              </span>
+            </h1>
 
+            {/* Subheadline */}
+            <p className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed font-light">
+              Comprehensive guidance for international and underprivileged students with AI-powered scholarship matching and real-time updates.
+            </p>
             
-            <motion.p 
-              className="text-2xl md:text-3xl text-gray-700 mb-12 max-w-4xl mx-auto leading-[relaxed] font-light"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            >
-              {hero.subtitle}
-            </motion.p>
-            
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.8 }}
-            >
-              <Link to="/auto-scholarships">
-                <Button size="lg" className="bg-blue-900 text-white px-10 py-7 text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
-                  <Sparkles className="mr-3 h-6 w-6 group-hover:rotate-180 transition-transform duration-500" />
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+              <button className="group px-10 py-7 bg-blue-900 text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <span className="flex items-center justify-center gap-3">
+                  <Sparkles className="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" />
                   Try AI Scholarship Finder
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/scholarships">
-                <Button size="lg" variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-500 hover:text-blue-100 px-10 py-7 text-xl font-bold transition-all duration-300">
-                  <BookOpen className="mr-3 h-6 w-6" />
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                </span>
+              </button>
+              
+              <button className="group px-10 py-7 bg-white border-2 border-blue-900 text-blue-900 rounded-xl text-xl font-bold shadow-lg hover:bg-blue-900 hover:text-white transition-all duration-300">
+                <span className="flex items-center justify-center gap-3">
+                  <BookOpen className="w-6 h-6" />
                   Browse Scholarships
-                </Button>
-              </Link>
-            </motion.div>
+                </span>
+              </button>
+            </div>
 
-            <motion.div 
-              className="flex flex-wrap justify-center gap-8 text-gray-700"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-            >
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span>501(c)(3) Nonprofit (pending)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span>100% Free</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span>AI-Powered Matching</span>
-              </div>
-            </motion.div>
-          </motion.div>
+            {/* Benefits */}
+            <div className="flex flex-wrap justify-center gap-8 text-gray-700">
+              {benefits.map((benefit, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span>{benefit.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      
-
       {/* Features Section */}
-      <section className="py-16 relative">
+      <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4">
-          <motion.div 
-            className="text-center mb-20"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
+          <div className="text-center mb-20">
             <h2 className="text-6xl font-black text-gray-900 mb-6">
               Powerful Tools for Your Success
             </h2>
             <p className="text-2xl text-gray-700 max-w-3xl mx-auto">
               Everything you need to navigate the complex world of U.S. college admissions
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.15 }
-              }
-            }}
-          >
-            {features.features?.map((feature, index) => {
-              const IconComponent = getIconComponent(feature.icon);
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
               return (
-                <motion.div
+                <div
                   key={index}
-                  variants={{
-                    hidden: { opacity: 0, y: 50 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  whileHover={{ y: -10 }}
-                  className="group"
+                  className="group bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:-translate-y-2"
                 >
-                  <Link to={feature.link}>
-                    <Card className="h-full bg-white backdrop-blur-sm border border-gray-200 shadow-lg hover:border-blue-400 transition-all duration-300 hover:shadow-xl">
-                      <CardHeader className="text-center pb-6">
-                        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                          <IconComponent className="h-10 w-10 text-white" />
-                        </div>
-                        <CardTitle className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {feature.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-center">
-                        <CardDescription className="text-gray-700 leading-relaxed text-lg mb-6">
-                          {feature.description}
-                        </CardDescription>
-                        <div className="flex items-center justify-center text-blue-600 font-semibold group-hover:text-blue-700 text-lg">
-                          Get Started
-                          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-2 transition-transform" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
+                  <div className="text-center">
+                    {/* Icon */}
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-950 to-blue-900 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Icon className="w-10 h-10 text-white" />
+                    </div>
+                    
+                    {/* Content */}
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-700 text-lg leading-relaxed mb-6">
+                      {feature.description}
+                    </p>
+                    
+                    {/* CTA */}
+                    <div className="flex items-center justify-center gap-2 text-blue-600 font-semibold text-lg group-hover:text-blue-700">
+                      Get Started
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                    </div>
+                  </div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-{/* Stats Section */}
-      <section className="py-24 relative">
-        
-        <div className="max-w-7xl mx-auto px-4 relative">
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-4 gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.1 }
-              }
-            }}
-          >
-            {stats.stats?.map((stat, index) => {
-              const IconComponent = getIconComponent(stat.icon);
+      {/* Stats Section */}
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
               return (
-                <motion.div
+                <div
                   key={index}
-                  variants={{
-                    hidden: { opacity: 0, y: 50 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center bg-white backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200 hover:border-blue-400 transition-all duration-300"
+                  className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-blue-400 transition-all duration-300 hover:scale-105"
                 >
-                  <div className="w-20 h-20 rounded-2xl bg-blue-900 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <IconComponent className="h-10 w-10 text-white" />
+                  <div className="text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-blue-900 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <Icon className="w-10 h-10 text-white" />
+                    </div>
+                    <div className="text-5xl font-black text-gray-900 mb-3">
+                      <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
+                    </div>
+                    <div className="text-gray-700 text-lg font-medium">{stat.label}</div>
                   </div>
-                  <div className="text-5xl font-black text-gray-900 mb-3">
-                    <CountUp end={stat.number} suffix={stat.suffix} prefix={stat.prefix} />
-                  </div>
-                  <div className="text-gray-700 text-lg font-medium">{stat.label}</div>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </section>
+
       {/* CTA Section */}
-      <section className="py-12 relative">
-        
-        <div className="max-w-5xl mx-auto px-4 text-center relative">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-6xl font-black text-gray-900 mb-8">
+      <section className="py-20 relative">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <div className="bg-white rounded-2xl p-16 shadow-xl border border-gray-200">
+            <h2 className="text-6xl font-black text-gray-900 mb-6">
               Ready to Start Your Journey?
             </h2>
             <p className="text-2xl text-gray-700 mb-12 max-w-3xl mx-auto">
               Join thousands of students who have found their path to U.S. higher education
             </p>
-            <Link to="/signup">
-              <Button size="lg" className="bg-blue-900 hover:blue-500 text-white px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
-                <Rocket className="mr-3 h-7 w-7 group-hover:translate-y-[-4px] transition-transform" />
+            
+            <button className="group px-12 py-8 bg-blue-900 text-white rounded-xl text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <span className="flex items-center justify-center gap-3">
+                <Rocket className="w-7 h-7 group-hover:-translate-y-1 transition-transform" />
                 Get Started Free
-                <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
-              </Button>
-            </Link>
-          </motion.div>
+                <Sparkles className="w-7 h-7 group-hover:rotate-180 transition-transform duration-500" />
+              </span>
+            </button>
+          </div>
         </div>
       </section>
     </div>
