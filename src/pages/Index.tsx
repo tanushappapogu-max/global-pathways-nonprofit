@@ -148,7 +148,7 @@ const Index = () => {
               transition={{ delay: 0.4, duration: 0.8 }}
             >
               <Link to="/auto-scholarships" className="w-full sm:w-auto">
-                <button className="group w-full h-[90px] px-10 bg-blue-900 text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <button className="group w-full h-[90px] px-10 bg-blue-900 text-white border-2 border-black rounded-xl text-xl font-bold shadow-lg hover:shadow-xl hover:bg-black hover:text-blue-100 transition-all duration-300 hover:scale-105">
                   <span className="flex items-center justify-center gap-3 whitespace-nowrap">
                     <Sparkles className="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" />
                     Try AI Scholarship Finder
@@ -158,7 +158,7 @@ const Index = () => {
               </Link>
               
               <Link to="/cost-calculator" className="w-full sm:w-auto">
-                <button className="group w-full h-[90px] px-10 bg-white border-2 border-blue-900 text-blue-900 rounded-xl text-xl font-bold shadow-lg hover:bg-blue-900 hover:text-white transition-all duration-300 hover:scale-105">
+                <button className="group w-full h-[90px] px-10 bg-white border-2 border-black text-blue-900 rounded-xl text-xl font-bold shadow-lg hover:bg-black hover:text-blue-100 transition-all duration-300 hover:scale-105">
                   <span className="flex items-center justify-center gap-3 whitespace-nowrap">
                     <Calculator className="w-6 h-6 group-hover:rotate-45 transition-transform duration-500" />
                     Accurately Calculate Costs
