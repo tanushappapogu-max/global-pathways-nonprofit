@@ -130,7 +130,7 @@ export const Navigation: React.FC = () => {
                       to={item.path}
                       className={`nav-item text-xs font-medium transition-all duration-300 whitespace-nowrap px-4 py-2 rounded-full flex items-center space-x-1 ${
                         location.pathname === item.path
-                          ? 'text-white bg-gradient-to-r from-blue-500 to-blue-600 shadow-md'
+                          ? 'text-black bg-blue-100 shadow-md'
                           : 'text-gray-300 hover:text-white hover:bg-white/10'
                       }`}
                     >
