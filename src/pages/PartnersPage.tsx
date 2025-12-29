@@ -114,21 +114,21 @@ export const PartnersPage: React.FC = () => {
 
   const advisoryBoard = [
     {
-      name: 'Dr. Sarah Johnson',
-      title: 'Former Financial Aid Director',
-      organization: 'State University',
-      bio: 'Over 20 years of experience in financial aid administration and student support services.',
+      name: 'Tanush Appapogu',
+      title: 'Co-Founder & CEO',
+      organization: 'Downingtown East Highschool',
+      bio: 'Highschool student with a passion for helping others.',
     },
     {
-      name: 'Maria Rodriguez',
-      title: 'High School Counselor',
-      organization: 'Lincoln High School',
-      bio: 'Dedicated counselor helping first-generation college students navigate the admissions process.',
+      name: 'Shriyan Ghati',
+      title: 'Co-Founder & CFO',
+      organization: 'Downingtown STEM Acheademy',
+      bio: 'Dedicated student helping first-generation college students navigate the admissions process.',
     },
     {
-      name: 'James Chen',
-      title: 'College Access Program Director',
-      organization: 'Access Initiative',
+      name: 'Neel Vangala',
+      title: 'Co-Founder & COO',
+      organization: 'Downingtown East Highschool',
       bio: 'Leading initiatives to increase college enrollment among underrepresented students.',
     }
   ];
@@ -549,15 +549,19 @@ export const PartnersPage: React.FC = () => {
               Join our network of organizations committed to expanding college access and helping students achieve their dreams
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Button size="lg" className="bg-blue-900 hover:bg-blue-800 text-white px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
-                <Mail className="mr-3 h-7 w-7" />
-                Contact Us
-                <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
-              </Button>
-              <Button size="lg" variant="outline" className="border-2 border-blue-900 text-blue-900 hover:bg-blue-50 px-12 py-8 text-2xl font-bold transition-all duration-300">
-                <ExternalLink className="mr-3 h-7 w-7" />
-                Partnership Info
-              </Button>
+              <a href="mailto:info@globalpathwaysnonprofit.org">
+  <Button size="lg" className="bg-blue-900 hover:bg-blue-800 text-white px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
+    <Mail className="mr-3 h-7 w-7" />
+    Contact Us
+    <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
+  </Button>
+</a>            
+              <a href="/partnership-proposal.pdf" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" variant="outline" className="border-blue-900 text-blue-900 hover:bg-blue-50 px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
+                  <ArrowRight className="mr-3 h-7 w-7" />
+                  View Proposal
+                </Button>
+              </a>
             </div>
           </motion.div>
         </div>
