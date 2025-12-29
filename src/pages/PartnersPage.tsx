@@ -556,7 +556,7 @@ export const PartnersPage: React.FC = () => {
     <Sparkles className="ml-3 h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
   </Button>
 </a>            
-              <a href="/partnership-proposal.pdf" target="_blank" rel="noopener noreferrer">
+              <a href="/pdfcrowd.pdf" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="border-blue-900 text-blue-900 hover:bg-blue-50 px-12 py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 group">
                   <ArrowRight className="mr-3 h-7 w-7" />
                   View Proposal
