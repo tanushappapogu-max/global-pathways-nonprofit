@@ -3,9 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import Index from "./pages/Index";
@@ -32,51 +32,58 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Get Google Client ID from environment variables
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <LanguageProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <div className="min-h-screen bg-background font-sans antialiased">
-                <Navigation />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/signup" element={<SignupPage />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/colleges" element={<CollegesPage />} />
-                  <Route path="/fafsa" element={<FAFSAPage />} />
-                  <Route path="/timeline" element={<TimelinePage />} />
-                  <Route path="/college-comparison" element={<CollegeComparisonPage />} />
-                  <Route path="/impact" element={<ImpactPage />} />
-                  <Route path="/counselor-portal" element={<CounselorPortalPage />} />
-                  <Route path="/scholarships" element={<ScholarshipPage />} />
-                  <Route path="/auto-scholarships" element={<AutoScholarshipFinderPage />} />
-                  <Route path="/ai-finder" element={<AutoScholarshipFinderPage />} />
-                  <Route path="/cost-calculator" element={<CostCalculatorPage />} />
-                  <Route path="/partners" element={<PartnersPage />} />
-                  <Route path="/blog" element={<BlogPage />} />
-                  <Route path="/blog/:slug" element={<BlogPage />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/success-stories" element={<SuccessStoriesPage />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-                  <Route path="/roadmap" element={<RoadmapPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Footer />
-              </div>
-            </BrowserRouter>
-          </AuthProvider>
-        </LanguageProvider>
-      </GoogleOAuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="min-h-screen bg-background font-sans antialiased">
+              <Navigation />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                
+                {/* Protected Routes - Require Login */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/timeline" element={
+                  <ProtectedRoute>
+                    <TimelinePage />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Public Routes */}
+                <Route path="/colleges" element={<CollegesPage />} />
+                <Route path="/fafsa" element={<FAFSAPage />} />
+                <Route path="/college-comparison" element={<CollegeComparisonPage />} />
+                <Route path="/impact" element={<ImpactPage />} />
+                <Route path="/counselor-portal" element={<CounselorPortalPage />} />
+                <Route path="/scholarships" element={<ScholarshipPage />} />
+                <Route path="/auto-scholarships" element={<AutoScholarshipFinderPage />} />
+                <Route path="/ai-finder" element={<AutoScholarshipFinderPage />} />
+                <Route path="/cost-calculator" element={<CostCalculatorPage />} />
+                <Route path="/partners" element={<PartnersPage />} />
+                <Route path="/blog" element={<BlogPage />} />
+                <Route path="/blog/:slug" element={<BlogPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/success-stories" element={<SuccessStoriesPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="/roadmap" element={<RoadmapPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Footer />
+            </div>
+          </BrowserRouter>
+        </AuthProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

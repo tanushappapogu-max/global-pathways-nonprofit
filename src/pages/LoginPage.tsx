@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, Mail, Lock, AlertCircle } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { supabase } from '@/integrations/supabase/client';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -17,46 +17,35 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Google Sign-In Handler
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        // Get user info from Google
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        }).then(res => res.json());
-        
-        console.log('Google User Info:', userInfo);
-        
-        // Try to sign in with Google email
-        // Note: You'll need to handle Google OAuth properly in your backend
-        // This is a simplified version - you should create a proper OAuth flow
-        
-        toast({
-          title: "Welcome!",
-          description: "Successfully signed in with Google!",
-        });
-        setTimeout(() => navigate('/dashboard'), 500);
-      } catch (err) {
-        setError('Google sign-in failed. Please try again.');
-        toast({
-          title: "Error",
-          description: "Failed to sign in with Google.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Google Sign-In Failed",
-        description: "Could not connect to Google. Please try again.",
-        variant: "destructive"
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        },
       });
+
+      if (error) {
+        throw error;
+      }
+
+      // Supabase will handle redirect; AuthContext will update automatically
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      setError('Google sign-in failed. Please try again.');
+      toast({
+        title: 'Google Sign-In Failed',
+        description: 'Could not sign in with Google. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,27 +54,28 @@ export const LoginPage = () => {
 
     try {
       const { error } = await signIn(email, password);
-      
+
       if (error) {
         setError(error.message);
         toast({
-          title: "Login Failed",
+          title: 'Login Failed',
           description: error.message,
-          variant: "destructive"
+          variant: 'destructive',
         });
       } else {
         toast({
-          title: "Success!",
-          description: "Welcome back! Redirecting to dashboard...",
+          title: 'Success!',
+          description: 'Welcome back! Redirecting to dashboard...',
         });
         setTimeout(() => navigate('/dashboard'), 500);
       }
     } catch (err) {
+      console.error('Email sign-in error:', err);
       setError('An unexpected error occurred. Please try again.');
       toast({
-        title: "Error",
-        description: "Failed to sign in. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to sign in. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -106,10 +96,10 @@ export const LoginPage = () => {
           {/* Google Sign-In Button */}
           <Button
             type="button"
-            onClick={() => googleLogin()}
+            onClick={handleGoogleLogin}
             disabled={loading}
             variant="outline"
-            className="w-full mb-6 h-12 border-2 hover:bg-gray-50"
+            className="w-full mb-6 h-12 border-2 hover:bg-gray-200"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -149,7 +139,7 @@ export const LoginPage = () => {
                 <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Email</label>
               <div className="relative">
@@ -159,7 +149,7 @@ export const LoginPage = () => {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 hover:bg-gray-200"
                   required
                   disabled={loading}
                 />
@@ -175,15 +165,15 @@ export const LoginPage = () => {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 hover:bg-gray-200"
                   required
                   disabled={loading}
                 />
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-blue-900 hover:from-blue-700 hover:to-purple-700"
               disabled={loading}
             >
@@ -200,7 +190,10 @@ export const LoginPage = () => {
 
           <div className="mt-6 space-y-3">
             <div className="text-center">
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
                 Forgot password?
               </Link>
             </div>

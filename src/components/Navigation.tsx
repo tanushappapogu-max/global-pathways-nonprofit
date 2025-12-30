@@ -9,6 +9,7 @@ import { GraduationCap, Menu, X, Sparkles } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
+  console.log("NAV USER:", user);
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
