@@ -11,14 +11,14 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Zap, ArrowRight, CheckCircle, Brain, Calendar, Heart
-} from 'lucide-react';
+import { Zap, ArrowRight, CheckCircle, Brain, Calendar, Heart, Globe } from 'lucide-react';
 import { CountUp } from '@/components/animations/CountUp';
 import { useNavigate } from 'react-router-dom';
+
 export const AutoScholarshipFinderPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     gpa: '', satScore: '', actScore: '', classRank: '', major: '', academicHonors: [],
@@ -34,7 +34,7 @@ export const AutoScholarshipFinderPage = () => {
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-const navigate = useNavigate();
+
   const handleArrayChange = (field, value, checked) => {
     setFormData(prev => ({
       ...prev,
@@ -58,73 +58,55 @@ const navigate = useNavigate();
 
   const handleSubmit = async () => {
     setLoading(true);
+    console.log('🚀 Starting scholarship search...');
 
     try {
-      console.log('Starting scholarship matching...');
-      
-      // Get matches from database first
-      let scholarships = await matchScholarshipsFromDatabase(formData);
-      
-      console.log('Database scholarships found:', scholarships?.length || 0);
+      let allScholarships = [];
 
-      // If we have fewer than 8, supplement with AI
-      // Get AI scholarships if needed
-if (!scholarships || scholarships.length < 8) {
-  console.log('Getting AI scholarships to reach minimum 8...');
-  const aiScholarships = await getAIScholarships(formData, 8 - (scholarships?.length || 0));
-  scholarships = [...(scholarships || []), ...aiScholarships];
-}
+      console.log('📊 Searching database...');
+      const dbScholarships = await getScholarshipsFromDatabase(formData);
+      console.log(`✅ Database: ${dbScholarships.length} scholarships`);
+      allScholarships = [...dbScholarships];
 
-// Get scholarships from Serper (real Google results)
-console.log('🔍 Searching web with Serper API...');
-const serperScholarships = await searchScholarshipsViaSerper(formData);
-scholarships = [...scholarships, ...serperScholarships];
-console.log('✅ Total with Serper:', scholarships.length);
+      console.log('🌐 Searching web with Perplexity AI...');
+      const aiScholarships = await getScholarshipsFromPerplexity(formData);
+      console.log(`✅ Perplexity: ${aiScholarships.length} scholarships`);
+      allScholarships = [...allScholarships, ...aiScholarships];
 
-// Get additional scholarships from OpenAI
-console.log('🤖 Getting OpenAI scholarships...');
-const onlineScholarships = await searchOnlineScholarships(formData);
-scholarships = [...scholarships, ...onlineScholarships];
-console.log('✅ Total scholarships:', scholarships.length);
+      allScholarships = removeDuplicates(allScholarships);
+      console.log(`🔄 After deduplication: ${allScholarships.length}`);
 
-// Remove duplicates based on name
-scholarships = scholarships.filter((scholarship, index, self) =>
-  index === self.findIndex((s) => s.name === scholarship.name)
-);
-const today = new Date();
+      allScholarships = filterExpiredDeadlines(allScholarships);
+      console.log(`📅 After filtering expired: ${allScholarships.length}`);
 
-scholarships = scholarships.filter(scholarship => {
-  if (!scholarship.deadline) return false; // Skip if no deadline
-  const deadlineDate = new Date(scholarship.deadline);
-  return deadlineDate >= today; // Keep only future scholarships
-});
+      allScholarships = allScholarships.filter(s => s.match >= 60);
+      console.log(`🎯 After filtering low matches: ${allScholarships.length}`);
 
+      allScholarships.sort((a, b) => b.match - a.match);
+      const topMatches = allScholarships.slice(0, 20);
 
-      if (scholarships && scholarships.length > 0) {
-        console.log('Total scholarships:', scholarships.length);
-        setResults(scholarships);
-      } else {
-        const mockResults = getMockResults();
-        setResults(mockResults);
-      }
-      
+      console.log(`✅ Final results: ${topMatches.length} scholarships`);
+      setResults(topMatches.length > 0 ? topMatches : getMockResults());
       setStep(7);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      const mockResults = getMockResults();
-      setResults(mockResults);
+      console.error('❌ Error:', error);
+      toast({
+        title: "Search Error",
+        description: "Using available results. Check console for details.",
+        variant: "destructive"
+      });
+      setResults(getMockResults());
       setStep(7);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
   };
 
-  const matchScholarshipsFromDatabase = async (profile) => {
+  const getScholarshipsFromDatabase = async (profile) => {
     try {
-      // Fetch all scholarships from database
-      const { data: allScholarships, error } = await supabase
+      const { data: scholarships, error } = await supabase
         .from('scholarships')
         .select('*')
         .order('amount', { ascending: false })
@@ -135,575 +117,316 @@ scholarships = scholarships.filter(scholarship => {
         return [];
       }
 
-      if (!allScholarships || allScholarships.length === 0) {
+      if (!scholarships || scholarships.length === 0) {
+        console.log('⚠️ No scholarships in database');
         return [];
       }
 
-      // Filter and match scholarships
-      const matches = allScholarships
-        .filter(scholarship => {
-          // STRICT FILTERING - Remove scholarships that don't match basic criteria
-          
-          // Gender filtering
-          if (scholarship.eligibility && scholarship.name) {
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            const nameLower = scholarship.name.toLowerCase();
-            const combined = eligibilityLower + ' ' + nameLower;
-            
-            // Filter out women-only scholarships for non-female users
-            if (profile.gender !== 'female' && 
-                (combined.includes('women') || 
-                 combined.includes('woman') || 
-                 combined.includes('female') ||
-                 combined.includes('she/her'))) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - women only, user is ${profile.gender}`);
-              return false;
-            }
-            
-            // Filter out men-only scholarships for non-male users
-            if (profile.gender !== 'male' && 
-                (combined.includes('men only') || 
-                 combined.includes('male only'))) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - men only`);
-              return false;
-            }
-          }
-          
-          // Ethnicity filtering - only if scholarship is ethnicity-specific and user doesn't match
-          if (scholarship.eligibility) {
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            const profileEthnicityLower = profile.ethnicity?.toLowerCase() || '';
-            
-            // Check if scholarship is ethnicity-specific
-            const isHispanicOnly = eligibilityLower.includes('hispanic') || eligibilityLower.includes('latino');
-            const isBlackOnly = eligibilityLower.includes('black') || eligibilityLower.includes('african american');
-            const isAsianOnly = eligibilityLower.includes('asian') && !eligibilityLower.includes('all');
-            const isNativeOnly = eligibilityLower.includes('native american') || eligibilityLower.includes('indigenous');
-            
-            // Filter if scholarship is ethnicity-specific and user doesn't match
-            if (isHispanicOnly && !profileEthnicityLower.includes('hispanic') && !profileEthnicityLower.includes('latino')) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - Hispanic/Latino only`);
-              return false;
-            }
-            if (isBlackOnly && !profileEthnicityLower.includes('black') && !profileEthnicityLower.includes('african')) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - Black/African American only`);
-              return false;
-            }
-            if (isAsianOnly && !profileEthnicityLower.includes('asian') && !profileEthnicityLower.includes('pacific')) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - Asian only`);
-              return false;
-            }
-            if (isNativeOnly && !profileEthnicityLower.includes('native')) {
-              console.log(`🚫 Filtered out "${scholarship.name}" - Native American only`);
-              return false;
-            }
-          }
-          
-          return true; // Scholarship passes all filters
-        })
+      const matched = scholarships
         .map(scholarship => {
-          let matchScore = 50; // Base score
-
-          // Check major match
-          if (profile.major && scholarship.eligibility) {
-            const majorLower = profile.major.toLowerCase();
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            const nameLower = scholarship.name?.toLowerCase() || '';
-            
-            // Check for major match
-            if (eligibilityLower.includes(majorLower)) {
-              matchScore += 25;
-            }
-            
-            // STEM major boost
-            const isStemMajor = majorLower.includes('engineering') || 
-                               majorLower.includes('science') || 
-                               majorLower.includes('math') || 
-                               majorLower.includes('computer') ||
-                               majorLower.includes('biology') ||
-                               majorLower.includes('biomedical') ||
-                               majorLower.includes('chemical') ||
-                               majorLower.includes('mechanical');
-            
-            const isStemScholarship = eligibilityLower.includes('stem') || 
-                                     eligibilityLower.includes('engineering') ||
-                                     eligibilityLower.includes('science') ||
-                                     nameLower.includes('stem') ||
-                                     nameLower.includes('engineering');
-            
-            if (isStemMajor && isStemScholarship) {
-              matchScore += 20;
-            }
-            
-            // Biomedical/Bio engineering specific
-            if ((majorLower.includes('bio') || majorLower.includes('biomedical')) &&
-                (eligibilityLower.includes('bio') || nameLower.includes('bio'))) {
-              matchScore += 15;
-            }
-          }
-
-          // Gender match bonus (not filter)
-          if (profile.gender && scholarship.eligibility) {
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            const nameLower = scholarship.name?.toLowerCase() || '';
-            
-            // Only give bonus if scholarship specifically mentions gender positively
-            if (profile.gender === 'male' && 
-                (eligibilityLower.includes('male students') || 
-                 nameLower.includes('male scholars'))) {
-              matchScore += 15;
-            }
-          }
-
-          // First generation boost
-          if (profile.firstGeneration && scholarship.name) {
-            const nameLower = scholarship.name.toLowerCase();
-            const eligibilityLower = scholarship.eligibility?.toLowerCase() || '';
-            if (nameLower.includes('first generation') || 
-                nameLower.includes('first-generation') ||
-                eligibilityLower.includes('first generation')) {
-              matchScore += 25;
-            }
-          }
-
-          // Ethnicity match bonus
-          if (profile.ethnicity && scholarship.eligibility) {
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            const nameLower = scholarship.name?.toLowerCase() || '';
-            const ethnicityLower = profile.ethnicity.toLowerCase();
-            
-            // Give bonus for matching ethnicity
-            if (eligibilityLower.includes(ethnicityLower) ||
-                (ethnicityLower.includes('asian') && (eligibilityLower.includes('asian') || eligibilityLower.includes('aapi'))) ||
-                (ethnicityLower.includes('pacific') && eligibilityLower.includes('pacific')) ||
-                (ethnicityLower.includes('indian') && (eligibilityLower.includes('indian') || eligibilityLower.includes('south asian')))) {
-              matchScore += 25;
-            }
-          }
-
-          // State/region match
-          if (profile.state && scholarship.region) {
-            const regionLower = scholarship.region.toLowerCase();
-            const stateLower = profile.state.toLowerCase();
-            if (regionLower.includes(stateLower)) {
-              matchScore += 15;
-            }
-          }
-
-          // GPA bonus
-          if (profile.gpa && scholarship.eligibility) {
-            const gpaNum = parseFloat(profile.gpa);
-            const eligibilityLower = scholarship.eligibility.toLowerCase();
-            
-            if (gpaNum >= 3.5 && eligibilityLower.includes('3.5')) {
-              matchScore += 10;
-            } else if (gpaNum >= 3.0 && eligibilityLower.includes('3.0')) {
-              matchScore += 10;
-            }
-          }
-
-          // Cap at 95%
-          matchScore = Math.min(95, matchScore);
-
-          console.log(`✅ Matched "${scholarship.name}" with ${matchScore}% score`);
+          const matchData = calculateMatch(scholarship, profile);
+          if (!matchData.passes) return null;
 
           return {
+            id: `db-${scholarship.id}`,
             name: scholarship.name,
             provider: scholarship.provider || 'Various',
             amount: scholarship.amount || 5000,
-            deadline: scholarship.deadline || '2026-06-30',
+            deadline: scholarship.deadline || '2026-12-31',
             description: scholarship.description || 'Scholarship opportunity',
-            url: scholarship.application_url || scholarship.link || 'https://example.com',
-            match: matchScore,
-            requirements: scholarship.eligibility ? [scholarship.eligibility] : ['Check eligibility requirements']
+            url: scholarship.application_url || scholarship.link || '#',
+            match: matchData.score,
+            requirements: scholarship.eligibility ? [scholarship.eligibility] : ['Check requirements'],
+            source: 'Database'
           };
-        });
-        
+        })
+        .filter(s => s !== null);
 
-      // Sort by match score and return top matches
-      const topMatches = matches
-        .filter(m => m.match >= 65) // Only show good matches
-        .sort((a, b) => b.match - a.match)
-        .slice(0, 8);
-
-      console.log(`📊 Final matches: ${topMatches.length} scholarships`);
-      return topMatches;
+      return matched;
 
     } catch (error) {
-      console.error('Error matching scholarships:', error);
+      console.error('Database search error:', error);
       return [];
     }
   };
 
-  const getAIScholarships = async (profile, minCount) => {
-  try {
-    const prompt = `Search the internet RIGHT NOW for ${minCount} REAL, CURRENT scholarships for this student profile:
+  const calculateMatch = (scholarship, profile) => {
+    let score = 50;
+    let passes = true;
 
-STUDENT PROFILE:
-- Major/Field: ${profile.major}
-- GPA: ${profile.gpa}
-- Ethnicity: ${profile.ethnicity}
-- Gender: ${profile.gender}
-- State: ${profile.state}
-- First Generation: ${profile.firstGeneration ? 'Yes' : 'No'}
-- Activities: ${profile.extracurriculars}
-- Career Goals: ${profile.careerGoals}
+    const eligibility = (scholarship.eligibility || '').toLowerCase();
+    const name = (scholarship.name || '').toLowerCase();
+    const combined = `${eligibility} ${name}`;
 
-REQUIREMENTS:
-1. Search for scholarships that are ACTUALLY AVAILABLE RIGHT NOW in december 2025-2026
-2. Find scholarships with REAL application URLs that work
-3. Include scholarships from: Fastweb, Scholarships.com, College Board, Cappex, Bold.org
-4. Prioritize scholarships that match the student's profile
-5. Include application deadlines in december 2025 or 2026
-
-Return ONLY valid JSON array (no markdown, no explanation):
-[{
-  "name": "Exact Scholarship Name",
-  "provider": "Organization Name",
-  "amount": 5000,
-  "deadline": "2026-03-15",
-  "description": "What the scholarship is for",
-  "url": "https://actual-working-url.com/apply",
-  "match": 85,
-  "requirements": ["Requirement 1", "Requirement 2"]
-}]`;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o", // This model has web search built-in
-        messages: [
-          {
-            role: "system",
-            content: "You are a scholarship search expert with real-time internet access. Search the web for current, legitimate scholarships with working application links. Always verify the scholarships exist and have valid URLs."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 3000 // Increased for more results
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API Error:', errorData);
-      throw new Error(errorData.error?.message || 'API request failed');
+    const platforms = ['raise.me', 'going merry', 'scholarshipowl', 'fastweb', 'fafsa completion'];
+    if (platforms.some(p => name.includes(p))) {
+      return { score: 0, passes: false };
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '[]';
-    
-    console.log('Raw OpenAI response:', content);
-    
-    // Clean up any markdown formatting
-    const cleanContent = content
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
-    
-    const aiScholarships = JSON.parse(cleanContent);
-    
-    console.log('✅ OpenAI found scholarships:', aiScholarships.length);
-    return aiScholarships;
-  } catch (error) {
-    console.error('❌ Error getting AI scholarships:', error);
-    return [];
-  }
-};
-
-const searchOnlineScholarships = async (profile) => {
-  try {
-    console.log('🔍 Searching for additional online scholarships...');
-    
-    // Build a search query based on profile
-    const searchTerms = [
-      profile.major,
-      profile.ethnicity,
-      profile.state,
-      profile.firstGeneration ? 'first generation' : '',
-      'scholarship 2025'
-    ].filter(Boolean).join(' ');
-
-    const prompt = `Search Google, Fastweb, Scholarships.com, and other scholarship sites for scholarships matching: "${searchTerms}"
-
-Find 3-5 additional scholarships with:
-- Valid application URLs
-- Clear deadlines
-- Specific award amounts
-
-Return ONLY JSON (no markdown):
-[{
-  "name": "Scholarship Name",
-  "provider": "Organization",
-  "amount": 5000,
-  "deadline": "2026-MM-DD",
-  "description": "Brief description",
-  "url": "https://real-url.com",
-  "match": 75,
-  "requirements": ["Requirement 1"]
-}]`;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You have internet access. Search scholarship websites and return real scholarships with working URLs."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '[]';
-    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const onlineScholarships = JSON.parse(cleanContent);
-    
-    console.log('✅ Found additional online scholarships:', onlineScholarships.length);
-    return onlineScholarships;
-  } catch (error) {
-    console.error('❌ Error searching online:', error);
-    return [];
-  }
-};
-
-const searchScholarshipsViaSerper = async (profile) => {
-  try {
-    console.log('🔍 Searching web via Serper API...');
-    
-    // Build smart search query
-    const searchQuery = [
-      profile.major,
-      'scholarship',
-      profile.state,
-      profile.ethnicity,
-      profile.firstGeneration ? 'first generation' : '',
-      '2025 2026 apply deadline'
-    ].filter(Boolean).join(' ');
-
-    const response = await fetch('https://google.serper.dev/search', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': import.meta.env.VITE_SERPER_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        q: searchQuery,
-        num: 10
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Serper API request failed');
+    const intlKeywords = ['japan', 'germany', 'europe', 'erasmus', 'daad', 'mext'];
+    if (intlKeywords.some(k => name.includes(k)) && !profile.studyAbroad) {
+      return { score: 0, passes: false };
     }
 
-    const data = await response.json();
-    
-    // Parse organic search results
-    const scholarships = data.organic?.slice(0, 10).map((result, index) => {
-      const amount = extractAmount(result.snippet + ' ' + result.title);
-      const deadline = extractDeadline(result.snippet + ' ' + result.title);
-      
-      return {
-        id: `serper-${Date.now()}-${index}`,
-        name: cleanScholarshipName(result.title),
-        provider: extractProvider(result.link),
-        amount: amount || 5000,
-        deadline: deadline || '2025-12-31',
-        description: result.snippet || 'Scholarship opportunity',
-        url: result.link,
-        match: calculateSerperMatch(result, profile),
-        requirements: extractRequirements(result.snippet),
-        source: 'Web Search'
-      };
-    }).filter(s => 
-      s.name.toLowerCase().includes('scholarship') ||
-      s.description.toLowerCase().includes('scholarship') ||
-      s.url.toLowerCase().includes('scholarship')
-    ) || [];
-
-    console.log('✅ Serper found scholarships:', scholarships.length);
-    return scholarships;
-
-  } catch (error) {
-    console.error('❌ Serper Error:', error);
-    return [];
-  }
-};
-
-// Helper functions for Serper
-const extractAmount = (text) => {
-  const matches = text.match(/\$[\d,]+/g);
-  if (!matches) return null;
-  const amounts = matches.map(m => parseInt(m.replace(/\$|,/g, '')));
-  return Math.max(...amounts);
-};
-
-const extractDeadline = (text) => {
-  const datePatterns = [
-    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+202[5-6]/i,
-    /\d{1,2}\/\d{1,2}\/202[5-6]/,
-    /202[5-6]-\d{2}-\d{2}/
-  ];
-  
-  for (const pattern of datePatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        const date = new Date(match[0]);
-        if (!isNaN(date.getTime())) {
-          return date.toISOString().split('T')[0];
-        }
-      } catch (e) {}
+    if ((name.includes('rotc') || name.includes('military') || name.includes('space force')) && 
+        !combined.includes('dependent')) {
+      return { score: 0, passes: false };
     }
-  }
-  return null;
-};
 
-const cleanScholarshipName = (title) => {
-  return title
-    .replace(/\s*-\s*Scholarships?\.com.*$/i, '')
-    .replace(/\s*\|\s*.*$/, '')
-    .replace(/\s*-\s*[A-Z][a-zA-Z\s]+$/, '')
-    .replace(/\s*\.\.\.$/, '')
-    .trim();
-};
+    if (!scholarship.amount || scholarship.amount === 0) {
+      return { score: 0, passes: false };
+    }
 
-const extractProvider = (url) => {
-  try {
-    const domain = new URL(url).hostname.replace('www.', '');
-    const name = domain.split('.')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  } catch {
-    return 'Various';
-  }
-};
-
-const calculateSerperMatch = (result, profile) => {
-  let score = 70;
-  const text = (result.title + ' ' + result.snippet).toLowerCase();
-  
-  if (profile.major && text.includes(profile.major.toLowerCase())) score += 15;
-  if (profile.state && text.includes(profile.state.toLowerCase())) score += 10;
-  if (profile.ethnicity && text.includes(profile.ethnicity.toLowerCase())) score += 15;
-  if (profile.firstGeneration && (text.includes('first generation') || text.includes('first-generation'))) score += 10;
-  
-  return Math.min(95, score);
-};
-
-const extractRequirements = (text) => {
-  const requirements = [];
-  
-  const gpaMatch = text.match(/GPA.*?([\d.]+)/i);
-  if (gpaMatch) requirements.push(`GPA ${gpaMatch[1]}+`);
-  
-  if (text.includes('essay')) requirements.push('Essay required');
-  if (text.includes('letter of recommendation') || text.includes('recommendation letter')) requirements.push('Letter of recommendation');
-  if (text.includes('transcript')) requirements.push('Transcript required');
-  
-  return requirements.length > 0 ? requirements : ['Check eligibility requirements'];
-};
-  const saveMatches = async () => {
-  // Check if user is signed in
-  if (!user) {
-    toast({
-      title: "Sign in required",
-      description: "Please sign in to save scholarships to your dashboard.",
-      variant: "destructive"
-    });
-    
-    setTimeout(() => {
-      navigate('/login');
-    }, 1000);
-    return;
-  }
-
-  try {
-    console.log('💾 Saving scholarships to localStorage...');
-
-    // Get existing saved scholarships from localStorage
-    const existingSaved = localStorage.getItem('savedScholarships');
-    const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
-
-    // Add new scholarships, avoiding duplicates
-    let addedCount = 0;
-    results.forEach(scholarship => {
-      const alreadySaved = savedScholarships.some(s => 
-        s.name === scholarship.name && s.provider === scholarship.provider
-      );
-
-      if (!alreadySaved) {
-        savedScholarships.push({
-          id: scholarship.id || Date.now() + Math.random(),
-          name: scholarship.name,
-          provider: scholarship.provider,
-          amount: scholarship.amount,
-          deadline: scholarship.deadline,
-          description: scholarship.description,
-          url: scholarship.url
-        });
-        addedCount++;
-        console.log(`✅ Added: ${scholarship.name}`);
-      } else {
-        console.log(`ℹ️ Already saved: ${scholarship.name}`);
+    if (profile.gender === 'male') {
+      if (combined.includes('women only') || combined.includes('female only') ||
+          (combined.includes('women') && !combined.includes('men'))) {
+        return { score: 0, passes: false };
       }
-    });
-
-    // Save back to localStorage
-    localStorage.setItem('savedScholarships', JSON.stringify(savedScholarships));
-    console.log(`✅ Total saved to localStorage: ${savedScholarships.length}`);
-
-    if (addedCount > 0) {
-      toast({
-        title: "Success!",
-        description: `${addedCount} scholarship(s) saved to your dashboard!`
-      });
-    } else {
-      toast({
-        title: "Already Saved",
-        description: "These scholarships are already in your dashboard.",
-      });
+    } else if (profile.gender === 'female') {
+      if (combined.includes('men only') || combined.includes('male only')) {
+        return { score: 0, passes: false };
+      }
     }
 
-  } catch (error) {
-    console.error('❌ Error saving matches:', error);
-    toast({
-      title: "Error",
-      description: "Failed to save scholarships. Please try again.",
-      variant: "destructive"
-    });
+    if (profile.ethnicity) {
+      const ethnicityLower = profile.ethnicity.toLowerCase();
+      const isHispanicOnly = combined.includes('hispanic only') || combined.includes('latino only');
+      const isBlackOnly = combined.includes('black only') || combined.includes('african american only');
+      const isAsianOnly = combined.includes('asian only');
+      const isNativeOnly = combined.includes('native american only');
+
+      if ((isHispanicOnly && !ethnicityLower.includes('hispanic') && !ethnicityLower.includes('latino')) ||
+          (isBlackOnly && !ethnicityLower.includes('black') && !ethnicityLower.includes('african')) ||
+          (isAsianOnly && !ethnicityLower.includes('asian')) ||
+          (isNativeOnly && !ethnicityLower.includes('native'))) {
+        return { score: 0, passes: false };
+      }
+    }
+
+    if (profile.major && combined.includes(profile.major.toLowerCase())) {
+      score += 25;
+    }
+
+    const isStemProfile = profile.major && (
+      profile.major.toLowerCase().includes('engineering') ||
+      profile.major.toLowerCase().includes('science') ||
+      profile.major.toLowerCase().includes('computer')
+    );
+    const isStemScholarship = combined.includes('stem') || combined.includes('engineering');
+    if (isStemProfile && isStemScholarship) {
+      score += 20;
+    }
+
+    if (profile.firstGeneration && (combined.includes('first generation') || combined.includes('first-generation'))) {
+      score += 25;
+    }
+
+    if (profile.ethnicity && combined.includes(profile.ethnicity.toLowerCase())) {
+      score += 20;
+    }
+
+    if (profile.state && combined.includes(profile.state.toLowerCase())) {
+      score += 15;
+    }
+
+    if (profile.gpa) {
+      const gpaNum = parseFloat(profile.gpa);
+      if (gpaNum >= 3.5 && combined.includes('3.5')) {
+        score += 10;
+      } else if (gpaNum >= 3.0 && combined.includes('3.0')) {
+        score += 10;
+      }
+    }
+
+    score = Math.min(95, score);
+    return { score, passes: true };
+  };
+
+  const getScholarshipsFromPerplexity = async (profile) => {
+    try {
+      const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
+      
+      if (!apiKey) {
+        console.error('❌ Perplexity API key not found');
+        return [];
+      }
+
+      console.log('🔑 Perplexity API key found, searching...');
+
+      const prompt = `Search the web for 10-15 real, current college scholarships for this student profile:
+
+Student: ${profile.major || 'Undecided'} major, ${profile.ethnicity || 'any ethnicity'}, ${profile.gender || 'any gender'}, ${profile.state || 'any state'}, GPA: ${profile.gpa || 'not specified'}${profile.firstGeneration ? ', first-generation' : ''}
+
+Requirements:
+1. Find scholarships with application deadlines between January 2025 - December 2025
+2. Include real scholarship names from legitimate organizations
+3. Provide actual application URLs
+4. Include award amounts (as numbers, not "varies")
+5. Prioritize scholarships matching the student's profile
+
+Return ONLY a valid JSON array with this exact format (no markdown, no explanation):
+[
+  {
+    "name": "Exact Scholarship Name",
+    "provider": "Organization Name",
+    "amount": 5000,
+    "deadline": "2025-MM-DD",
+    "description": "Brief description",
+    "url": "https://actual-application-url.com",
+    "match": 85,
+    "requirements": ["Requirement 1", "Requirement 2"]
   }
-};
+]`;
+
+      const response = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
+          messages: [
+            {
+              role: "system",
+              content: "You are a scholarship search expert with real-time web access. Search the internet for current, legitimate scholarships. Return only valid JSON arrays."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 4000
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Perplexity API Error:', errorData);
+        throw new Error(errorData.error?.message || 'Perplexity API request failed');
+      }
+
+      const data = await response.json();
+      let content = data.choices?.[0]?.message?.content || '[]';
+      
+      console.log('📝 Raw Perplexity response:', content.substring(0, 300));
+
+      content = content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        content = jsonMatch[0];
+      }
+
+      const aiScholarships = JSON.parse(content);
+
+      return aiScholarships.map((s, index) => ({
+        id: `ai-${Date.now()}-${index}`,
+        name: s.name,
+        provider: s.provider || 'Various',
+        amount: typeof s.amount === 'number' ? s.amount : 5000,
+        deadline: s.deadline || '2025-12-31',
+        description: s.description || 'Scholarship opportunity',
+        url: s.url || '#',
+        match: s.match || 75,
+        requirements: s.requirements || ['Check eligibility'],
+        source: 'AI Web Search'
+      }));
+
+    } catch (error) {
+      console.error('❌ Perplexity error:', error);
+      console.log('ℹ️ Continuing with database results only');
+      return [];
+    }
+  };
+
+  const removeDuplicates = (scholarships) => {
+    const seen = new Set();
+    return scholarships.filter(s => {
+      const key = s.name.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const filterExpiredDeadlines = (scholarships) => {
+    const today = new Date();
+    return scholarships.filter(s => {
+      if (!s.deadline) return true;
+      const deadline = new Date(s.deadline);
+      return deadline >= today;
+    });
+  };
+
+  const saveMatches = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to save scholarships.",
+        variant: "destructive"
+      });
+      setTimeout(() => navigate('/login'), 1000);
+      return;
+    }
+
+    try {
+      const existingSaved = localStorage.getItem('savedScholarships');
+      const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
+
+      let addedCount = 0;
+      results.forEach(scholarship => {
+        const alreadySaved = savedScholarships.some(s => 
+          s.name === scholarship.name && s.provider === scholarship.provider
+        );
+
+        if (!alreadySaved) {
+          savedScholarships.push({
+            id: scholarship.id || `${Date.now()}-${Math.random()}`,
+            name: scholarship.name,
+            provider: scholarship.provider,
+            amount: scholarship.amount,
+            deadline: scholarship.deadline,
+            description: scholarship.description,
+            url: scholarship.url
+          });
+          addedCount++;
+        }
+      });
+
+      localStorage.setItem('savedScholarships', JSON.stringify(savedScholarships));
+
+      if (addedCount > 0) {
+        toast({
+          title: "Success!",
+          description: `${addedCount} scholarship(s) saved to your dashboard!`
+        });
+      } else {
+        toast({
+          title: "Already Saved",
+          description: "These scholarships are already in your dashboard."
+        });
+      }
+
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save scholarships.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const getMockResults = () => {
     return [
-      { name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2026-03-15", description: "For high-achieving students", url: "https://example.com/merit", requirements: ["3.5+ GPA", "Leadership"] },
-      { name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2026-04-01", description: "Supporting STEM students", url: "https://example.com/stem", requirements: ["STEM major", "Research experience"] },
-      { name: "Community Leadership Grant", amount: 7500, provider: "Community Foundation", match: 82, deadline: "2026-02-28", description: "For community involvement", url: "https://example.com/community", requirements: ["100+ volunteer hours"] },
-      { name: "First Generation Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2026-05-01", description: "Supporting first-gen students", url: "https://example.com/first-gen", requirements: ["First-generation status"] },
-      { name: "Diversity & Inclusion", amount: 8000, provider: "Diversity Institute", match: 85, deadline: "2026-03-30", description: "Promoting diversity", url: "https://example.com/diversity", requirements: ["Underrepresented background"] },
-      { name: "Academic Excellence Award", amount: 6000, provider: "Scholars Foundation", match: 80, deadline: "2026-04-15", description: "For top students", url: "https://example.com/academic", requirements: ["3.7+ GPA"] },
-      { name: "Future Leaders Program", amount: 9000, provider: "Leadership Institute", match: 78, deadline: "2026-05-15", description: "Leadership development", url: "https://example.com/leaders", requirements: ["Leadership roles"] },
-      { name: "Innovation Challenge", amount: 12000, provider: "Innovation Fund", match: 75, deadline: "2026-06-01", description: "For innovative thinkers", url: "https://example.com/innovation", requirements: ["Project portfolio"] }
+      { id: 'mock-1', name: "Merit Excellence Scholarship", amount: 15000, provider: "Education Foundation", match: 95, deadline: "2026-03-15", description: "For high-achieving students", url: "#", requirements: ["3.5+ GPA"], source: 'Mock' },
+      { id: 'mock-2', name: "STEM Innovation Award", amount: 10000, provider: "Tech Institute", match: 88, deadline: "2026-04-01", description: "Supporting STEM students", url: "#", requirements: ["STEM major"], source: 'Mock' },
+      { id: 'mock-3', name: "First Generation Scholarship", amount: 5000, provider: "Access Foundation", match: 90, deadline: "2026-05-01", description: "Supporting first-gen students", url: "#", requirements: ["First-generation"], source: 'Mock' }
     ];
   };
 
@@ -719,19 +442,22 @@ const extractRequirements = (text) => {
   const languageOptions = ["Spanish", "French", "German", "Chinese", "Japanese", "Korean", "Arabic", "Italian", "Portuguese", "Russian", "Hindi", "Other"];
   const academicHonorOptions = ["National Honor Society", "Beta Club", "Mu Alpha Theta", "National Merit Scholar", "AP Scholar", "Honor Roll", "Dean's List", "Academic All-State"];
 
+  // PART 1 ENDS HERE - Continue to Part 2
+  // PART 2 STARTS HERE - This continues from Part 1
+
   return (
     <div className="min-h-screen bg-blue-50 relative overflow-hidden">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
         <motion.div className="text-center mb-16 pt-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
           <Badge className="mb-8 bg-blue-900 text-white border-0 px-8 py-3 text-base font-medium">
-            <Brain className="w-5 h-5 mr-2" />
-            AI-Powered Matching
+            <Globe className="w-5 h-5 mr-2" />
+            AI-Powered Web Search
           </Badge>
           <h1 className="text-7xl md:text-8xl font-black mb-6">
             <span className="block text-gray-900 mb-4">AI Scholarship</span>
             <span className="block text-gray-900">Finder</span>
           </h1>
-          <p className="text-2xl text-gray-700 max-w-4xl mx-auto">Get personalized recommendations using AI and database matching</p>
+          <p className="text-2xl text-gray-700 max-w-4xl mx-auto">Get personalized recommendations using Perplexity AI and database matching</p>
         </motion.div>
 
         <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
@@ -770,28 +496,28 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Academic Information</h2>
                   <p className="text-gray-700 text-lg">Tell us about your academic achievements</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Current GPA (4.0 scale)</Label>
-                    <Input type="number" step="0.01" min="0" max="4.0" placeholder="3.75" value={formData.gpa} onChange={(e) => handleInputChange('gpa', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input type="number" step="0.01" min="0" max="4.0" placeholder="3.75" value={formData.gpa} onChange={(e) => handleInputChange('gpa', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">SAT Score (optional)</Label>
-                    <Input type="number" min="400" max="1600" placeholder="1450" value={formData.satScore} onChange={(e) => handleInputChange('satScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input type="number" min="400" max="1600" placeholder="1450" value={formData.satScore} onChange={(e) => handleInputChange('satScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">ACT Score (optional)</Label>
-                    <Input type="number" min="1" max="36" placeholder="32" value={formData.actScore} onChange={(e) => handleInputChange('actScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input type="number" min="1" max="36" placeholder="32" value={formData.actScore} onChange={(e) => handleInputChange('actScore', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Class Rank (if known)</Label>
-                    <Input placeholder="Top 10%" value={formData.classRank} onChange={(e) => handleInputChange('classRank', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input placeholder="Top 10%" value={formData.classRank} onChange={(e) => handleInputChange('classRank', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
                   <div className="md:col-span-2">
                     <Label className="block text-base font-medium text-gray-900 mb-2">Intended Major/Field of Study</Label>
-                    <Input placeholder="Computer Science, Pre-Med, Business, etc." value={formData.major} onChange={(e) => handleInputChange('major', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input placeholder="Computer Science, Pre-Med, Business, etc." value={formData.major} onChange={(e) => handleInputChange('major', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
                 </div>
                 <div>
@@ -799,7 +525,7 @@ const extractRequirements = (text) => {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {academicHonorOptions.map((honor) => (
                       <div key={honor} className="flex items-center space-x-2">
-                        <Checkbox id={honor} checked={formData.academicHonors.includes(honor)} onCheckedChange={(checked) => handleArrayChange('academicHonors', honor, checked)} className="border-gray-300" />
+                        <Checkbox id={honor} checked={formData.academicHonors.includes(honor)} onCheckedChange={(checked) => handleArrayChange('academicHonors', honor, checked)} />
                         <Label htmlFor={honor} className="text-sm text-gray-700 cursor-pointer">{honor}</Label>
                       </div>
                     ))}
@@ -813,9 +539,8 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Personal Background</h2>
                   <p className="text-gray-700 text-lg">Help us find scholarships that match your background</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Ethnicity/Race</Label>
@@ -830,7 +555,6 @@ const extractRequirements = (text) => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Gender</Label>
                     <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
@@ -845,17 +569,14 @@ const extractRequirements = (text) => {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">State of Residence</Label>
-                    <Input placeholder="California" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input placeholder="California" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">ZIP Code</Label>
-                    <Input placeholder="90210" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 h-12" />
+                    <Input placeholder="90210" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} className="bg-white border-gray-300 text-gray-900 h-12" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Citizenship Status</Label>
                     <Select value={formData.citizenship} onValueChange={(value) => handleInputChange('citizenship', value)}>
@@ -871,20 +592,18 @@ const extractRequirements = (text) => {
                     </Select>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="firstGeneration" checked={formData.firstGeneration} onCheckedChange={(checked) => handleInputChange('firstGeneration', checked)} className="border-gray-300" />
+                  <Checkbox id="firstGeneration" checked={formData.firstGeneration} onCheckedChange={(checked) => handleInputChange('firstGeneration', checked)} />
                   <Label htmlFor="firstGeneration" className="text-gray-700 cursor-pointer">
                     I am a first-generation college student (neither parent has a 4-year degree)
                   </Label>
                 </div>
-
                 <div>
                   <Label className="block text-base font-medium text-gray-900 mb-3">Languages Spoken (select all that apply)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {languageOptions.map((language) => (
                       <div key={language} className="flex items-center space-x-2">
-                        <Checkbox id={language} checked={formData.languages.includes(language)} onCheckedChange={(checked) => handleArrayChange('languages', language, checked)} className="border-gray-300" />
+                        <Checkbox id={language} checked={formData.languages.includes(language)} onCheckedChange={(checked) => handleArrayChange('languages', language, checked)} />
                         <Label htmlFor={language} className="text-sm text-gray-700 cursor-pointer">{language}</Label>
                       </div>
                     ))}
@@ -898,9 +617,8 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Financial Information</h2>
                   <p className="text-gray-700 text-lg">This helps us find need-based scholarships</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Annual Family Income Range</Label>
@@ -920,9 +638,8 @@ const extractRequirements = (text) => {
                     </Select>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="needBasedAid" checked={formData.needBasedAid} onCheckedChange={(checked) => handleInputChange('needBasedAid', checked)} className="border-gray-300" />
+                  <Checkbox id="needBasedAid" checked={formData.needBasedAid} onCheckedChange={(checked) => handleInputChange('needBasedAid', checked)} />
                   <Label htmlFor="needBasedAid" className="text-gray-700 cursor-pointer">I am interested in need-based financial aid</Label>
                 </div>
               </div>
@@ -933,41 +650,35 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Activities & Leadership</h2>
                   <p className="text-gray-700 text-lg">Showcase your extracurricular involvement and achievements</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
-                
                 <div className="space-y-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Extracurricular Activities</Label>
-                    <Textarea placeholder="List your clubs, sports, organizations, etc." value={formData.extracurriculars} onChange={(e) => handleInputChange('extracurriculars', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="List your clubs, sports, organizations, etc." value={formData.extracurriculars} onChange={(e) => handleInputChange('extracurriculars', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-                  
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Leadership Roles</Label>
-                    <Textarea placeholder="Describe any leadership positions you've held" value={formData.leadership} onChange={(e) => handleInputChange('leadership', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="Describe any leadership positions you've held" value={formData.leadership} onChange={(e) => handleInputChange('leadership', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Community Service & Volunteer Work</Label>
-                    <Textarea placeholder="Describe your volunteer experiences and community involvement" value={formData.communityService} onChange={(e) => handleInputChange('communityService', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="Describe your volunteer experiences and community involvement" value={formData.communityService} onChange={(e) => handleInputChange('communityService', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Work Experience</Label>
-                    <Textarea placeholder="List any part-time jobs, internships, or work experience" value={formData.workExperience} onChange={(e) => handleInputChange('workExperience', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="List any part-time jobs, internships, or work experience" value={formData.workExperience} onChange={(e) => handleInputChange('workExperience', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Awards & Recognition</Label>
-                    <Textarea placeholder="List any awards, honors, or special recognition you've received" value={formData.awards} onChange={(e) => handleInputChange('awards', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="List any awards, honors, or special recognition you've received" value={formData.awards} onChange={(e) => handleInputChange('awards', e.target.value)} rows={3} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-3">Special Talents & Skills (select all that apply)</Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {talentOptions.map((talent) => (
                         <div key={talent} className="flex items-center space-x-2">
-                          <Checkbox id={talent} checked={formData.talents.includes(talent)} onCheckedChange={(checked) => handleArrayChange('talents', talent, checked)} className="border-gray-300" />
+                          <Checkbox id={talent} checked={formData.talents.includes(talent)} onCheckedChange={(checked) => handleArrayChange('talents', talent, checked)} />
                           <Label htmlFor={talent} className="text-sm text-gray-700 cursor-pointer">{talent}</Label>
                         </div>
                       ))}
@@ -982,15 +693,13 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Career Goals & Preferences</h2>
                   <p className="text-gray-700 text-lg">Tell us about your future plans and college preferences</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
-                
                 <div className="space-y-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Career Goals & Aspirations</Label>
-                    <Textarea placeholder="Describe your career goals and what you hope to achieve" value={formData.careerGoals} onChange={(e) => handleInputChange('careerGoals', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="Describe your career goals and what you hope to achieve" value={formData.careerGoals} onChange={(e) => handleInputChange('careerGoals', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Preferred College Type</Label>
                     <Select value={formData.collegeType} onValueChange={(value) => handleInputChange('collegeType', value)}>
@@ -1007,9 +716,8 @@ const extractRequirements = (text) => {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="studyAbroad" checked={formData.studyAbroad} onCheckedChange={(checked) => handleInputChange('studyAbroad', checked)} className="border-gray-300" />
+                    <Checkbox id="studyAbroad" checked={formData.studyAbroad} onCheckedChange={(checked) => handleInputChange('studyAbroad', checked)} />
                     <Label htmlFor="studyAbroad" className="text-gray-700 cursor-pointer">I am interested in study abroad opportunities</Label>
                   </div>
                 </div>
@@ -1021,18 +729,16 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Additional Information</h2>
                   <p className="text-gray-700 text-lg">Share any unique circumstances or challenges</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
-                
                 <div className="space-y-6">
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Personal Challenges or Obstacles Overcome</Label>
-                    <Textarea placeholder="Describe any significant challenges you've faced and overcome" value={formData.challenges} onChange={(e) => handleInputChange('challenges', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="Describe any significant challenges you've faced and overcome" value={formData.challenges} onChange={(e) => handleInputChange('challenges', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900" />
                   </div>
-
                   <div>
                     <Label className="block text-base font-medium text-gray-900 mb-2">Unique Circumstances or Background</Label>
-                    <Textarea placeholder="Share anything unique about your background or circumstances" value={formData.uniqueCircumstances} onChange={(e) => handleInputChange('uniqueCircumstances', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500" />
+                    <Textarea placeholder="Share anything unique about your background or circumstances" value={formData.uniqueCircumstances} onChange={(e) => handleInputChange('uniqueCircumstances', e.target.value)} rows={4} className="bg-white border-gray-300 text-gray-900" />
                   </div>
                 </div>
               </div>
@@ -1043,58 +749,65 @@ const extractRequirements = (text) => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900">Your Matches</h2>
                   <p className="text-gray-700 text-lg">Found {results.length} scholarships for you</p>
-                   <p className="text-red-700 text-lg">*Ensure you are signed in to save matches*</p>
+                  <p className="text-red-700 text-lg mt-2">*Ensure you are signed in to save matches*</p>
                 </div>
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto mb-4"></div>
-                    <p className="text-gray-700">AI is analyzing your profile...</p>
+                    <p className="text-gray-700">AI is searching the web for scholarships...</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {results.map((scholarship, index) => {
-  // Check if already saved
-  const existingSaved = localStorage.getItem('savedScholarships');
-  const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
-  const isAlreadySaved = savedScholarships.some(s => 
-    s.name === scholarship.name && s.provider === scholarship.provider
-  );
+                      const existingSaved = localStorage.getItem('savedScholarships');
+                      const savedScholarships = existingSaved ? JSON.parse(existingSaved) : [];
+                      const isAlreadySaved = savedScholarships.some(s => 
+                        s.name === scholarship.name && s.provider === scholarship.provider
+                      );
 
-  return (
-    <motion.div key={index} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1 }}>
-      <Card className={`border-l-4 ${isAlreadySaved ? 'border-l-green-500 bg-green-50' : 'border-l-blue-900'}`}>
-        <CardContent className="p-6">
-          <div className="flex justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xl font-bold text-gray-900">{scholarship.name}</h3>
-                {isAlreadySaved && (
-                  <Badge className="bg-green-600 text-white">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Saved
-                  </Badge>
-                )}
-              </div>
-              <p className="text-blue-900 font-medium mb-3">{scholarship.provider}</p>
-              <p className="text-gray-700 text-sm mb-4">{scholarship.description}</p>
-              <div className="flex items-center gap-3 text-sm mb-4">
-                <Calendar className="h-4 w-4" />
-                <span>Deadline: {scholarship.deadline}</span>
-                <Badge className="bg-green-100 text-green-800">{Math.round(scholarship.match)}% Match</Badge>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-black text-blue-900 mb-4">${scholarship.amount.toLocaleString()}</div>
-              <Button size="sm" className="bg-blue-900" asChild>
-                <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply</a>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-})}
+                      return (
+                        <motion.div key={index} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.1 }}>
+                          <Card className={`border-l-4 ${isAlreadySaved ? 'border-l-green-500 bg-green-50' : 'border-l-blue-900'}`}>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h3 className="text-xl font-bold text-gray-900">{scholarship.name}</h3>
+                                    {isAlreadySaved && (
+                                      <Badge className="bg-green-600 text-white">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Saved
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs">
+                                      {scholarship.source}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-blue-900 font-medium mb-3">{scholarship.provider}</p>
+                                  <p className="text-gray-700 text-sm mb-4">{scholarship.description}</p>
+                                  <div className="flex items-center gap-3 text-sm mb-4">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>Deadline: {scholarship.deadline}</span>
+                                    <Badge className="bg-green-100 text-green-800">{Math.round(scholarship.match)}% Match</Badge>
+                                  </div>
+                                  {scholarship.requirements && scholarship.requirements.length > 0 && (
+                                    <div className="text-sm text-gray-600">
+                                      <strong>Requirements:</strong> {scholarship.requirements.join(', ')}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-3xl font-black text-blue-900 mb-4">${scholarship.amount.toLocaleString()}</div>
+                                  <Button size="sm" className="bg-blue-900" asChild>
+                                    <a href={scholarship.url} target="_blank" rel="noopener noreferrer">Apply</a>
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
                     {results.length > 0 && (
                       <div className="text-center pt-8">
                         <Button className="bg-pink-600 hover:bg-pink-500 px-8 py-6 text-lg" onClick={saveMatches}>
@@ -1129,3 +842,5 @@ const extractRequirements = (text) => {
     </div>
   );
 };
+
+export default AutoScholarshipFinderPage;
